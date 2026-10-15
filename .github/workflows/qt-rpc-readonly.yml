@@ -1,4 +1,4 @@
-name: QT historical cash-closure challenge
+name: QT equal-bid historical cash comparison
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -13,23 +13,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install pinned public research dependencies
+      - name: Pinned public dependencies
         run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
-      - name: ABI and read-only guard regression checks
+      - name: Offline ABI regression
         run: python3 -m unittest discover -s phase2 -p 'test_*.py' -v
-      - name: Canonical-prefix cash liquidation test
-        run: python3 history/prefix_followup.py
-      - name: Preserve full or partial prefix evidence
+      - name: Same producer payment cash comparison
+        run: python3 history/bid_followup.py
+      - name: Preserve cash and fee evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qt-aave-prefix-evidence
+          name: qt-aave-equal-bid-evidence
           path: |
             history/
             phase2/midnight_codec.py
-            phase2/test_phase2.py
-            phase2/collect.py
           retention-days: 7
-      - name: Scope
-        if: always()
-        run: echo 'Previously selected historical example; not an income or capture claim. No balance, storage or oracle overrides. Synthetic probe calls have explicit zero gasPrice for simulation only; real transaction gas is still required.'
