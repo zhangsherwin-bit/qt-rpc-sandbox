@@ -1,0 +1,33 @@
+name: QT frozen receipt and auction census
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  public-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned ABI and Keccak dependencies
+        run: python3 -m pip install eth-abi==5.2.0 eth-utils==5.3.1 pycryptodome==3.23.0
+      - name: Verify read-only boundary and integer arithmetic
+        run: python3 -m unittest discover -s research -p 'test_*.py' -v
+      - name: Read every frozen Base-USDC transaction receipt
+        run: python3 research/auction_census.py
+      - name: Archive exact source files without pycache directory
+        if: always()
+        run: mkdir -p evidence/source && find research -maxdepth 1 -type f -exec cp {} evidence/source/ \;
+      - name: Save evidence including errors
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-auction-census-evidence
+          path: evidence/
+          retention-days: 14
+      - name: Print evidence summary
+        if: always()
+        run: test ! -f evidence/auction_summary.json || cat evidence/auction_summary.json
