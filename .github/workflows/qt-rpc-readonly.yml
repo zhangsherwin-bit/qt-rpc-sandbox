@@ -1,4 +1,4 @@
-name: QT read-only blockchain API/RPC probe
+name: QT Phase2 real-state cash tests
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -6,29 +6,28 @@ on:
 permissions:
   contents: read
 jobs:
-  inspect:
-    name: Morpho and Base connectivity
+  examine:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Offline allowlist and failure-mode tests
-        run: python3 -m unittest discover -s tests -v
-      - name: Read-only public GET and JSON-RPC POST
-        run: python3 src/qt_probe.py
-        env:
-          QT_OUTPUT_DIR: evidence
-      - name: Preserve provider observations
+      - name: Install pinned public research dependencies
+        run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
+      - name: Independent ABI and failure controls
+        run: python3 -m unittest discover -s phase2 -p 'test_*.py' -v
+      - name: Compile research-only executor
+        run: python3 phase2/build_probe.py
+      - name: Public offers and canonical cash execution tests
+        run: python3 phase2/collect.py --run-public --max-requests 300 --max-markets 12 --max-positions 32
+      - name: Preserve full or partial evidence and source
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qt-public-api-rpc-evidence
-          path: evidence/
+          name: qt-phase2-cash-evidence
+          path: phase2/
           retention-days: 7
-      - name: Human-readable summary
+      - name: Evidence boundary
         if: always()
-        run: |
-          echo '--- QT read-only result ---'
-          if test -e evidence/report.json; then cat evidence/report.json; else echo 'No report was generated'; fi
+        run: echo 'Read SUMMARY.json and compiler status. A green workflow does not imply profit. No keys, signatures, funded accounts or blockchain transactions.'
