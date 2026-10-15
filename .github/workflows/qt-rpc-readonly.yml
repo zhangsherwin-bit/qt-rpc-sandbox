@@ -8,7 +8,7 @@ permissions:
 jobs:
   replay:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,13 +17,13 @@ jobs:
         run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
       - name: ABI and read-only guard regression checks
         run: python3 -m unittest discover -s phase2 -p 'test_*.py' -v
-      - name: Previously selected historical cash tests
-        run: python3 history/replay.py
-      - name: Preserve full or partial historical evidence
+      - name: Canonical-prefix cash liquidation test
+        run: python3 history/prefix_followup.py
+      - name: Preserve full or partial prefix evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qt-historical-cash-evidence
+          name: qt-aave-prefix-evidence
           path: |
             history/
             phase2/midnight_codec.py
@@ -32,4 +32,4 @@ jobs:
           retention-days: 7
       - name: Scope
         if: always()
-        run: echo 'Historical development examples only, not independent discovery. No transaction sent. Explicit time scenarios, no balance or storage overrides. All errors preserved.'
+        run: echo 'Previously selected historical example; not an income or capture claim. No balance, storage or oracle overrides. Synthetic probe calls have explicit zero gasPrice for simulation only; real transaction gas is still required.'
