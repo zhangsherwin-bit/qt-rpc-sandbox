@@ -1,4 +1,4 @@
-name: QT Phase2 real-state cash tests
+name: QT historical cash-closure challenge
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -6,28 +6,30 @@ on:
 permissions:
   contents: read
 jobs:
-  examine:
+  replay:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install pinned public research dependencies
         run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
-      - name: Independent ABI and failure controls
+      - name: ABI and read-only guard regression checks
         run: python3 -m unittest discover -s phase2 -p 'test_*.py' -v
-      - name: Compile research-only executor
-        run: python3 phase2/build_probe.py
-      - name: Public offers and canonical cash execution tests
-        run: python3 phase2/collect.py --run-public --max-requests 300 --max-markets 12 --max-positions 32
-      - name: Preserve full or partial evidence and source
+      - name: Previously selected historical cash tests
+        run: python3 history/replay.py
+      - name: Preserve full or partial historical evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qt-phase2-cash-evidence
-          path: phase2/
+          name: qt-historical-cash-evidence
+          path: |
+            history/
+            phase2/midnight_codec.py
+            phase2/test_phase2.py
+            phase2/collect.py
           retention-days: 7
-      - name: Evidence boundary
+      - name: Scope
         if: always()
-        run: echo 'Read SUMMARY.json and compiler status. A green workflow does not imply profit. No keys, signatures, funded accounts or blockchain transactions.'
+        run: echo 'Historical development examples only, not independent discovery. No transaction sent. Explicit time scenarios, no balance or storage overrides. All errors preserved.'
