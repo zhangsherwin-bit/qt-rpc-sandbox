@@ -1,0 +1,30 @@
+name: QT public economic evidence
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  public-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned ABI-only Python dependencies
+        run: python3 -m pip install eth-abi==5.2.0 eth-utils==5.3.1 pycryptodome==3.23.0
+      - name: Verify read-only boundary and integer arithmetic
+        run: python3 -m unittest discover -s research -p 'test_*.py' -v
+      - name: Acquire bounded public states, offers, and conversion quotes
+        run: python3 research/public_economics.py
+      - name: Save evidence including errors
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-economic-evidence
+          path: evidence/
+          retention-days: 14
+      - name: Print evidence summary
+        if: always()
+        run: test ! -f evidence/summary.json || cat evidence/summary.json
