@@ -1,0 +1,34 @@
+name: QT read-only blockchain API/RPC probe
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    name: Morpho and Base connectivity
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline allowlist and failure-mode tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Read-only public GET and JSON-RPC POST
+        run: python3 src/qt_probe.py
+        env:
+          QT_OUTPUT_DIR: evidence
+      - name: Preserve provider observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-public-api-rpc-evidence
+          path: evidence/
+          retention-days: 7
+      - name: Human-readable summary
+        if: always()
+        run: |
+          echo '--- QT read-only result ---'
+          if test -e evidence/report.json; then cat evidence/report.json; else echo 'No report was generated'; fi
