@@ -1,0 +1,10 @@
+{
+  "selected_before_cash_reads": true,
+  "classification": "Retrospective development sample, not prospective validation",
+  "rule": "Largest observed repayment case in each of the four Base/USDC families SOL, cbLTC, cbDOGE, cbZEC, plus the next-largest distinct SOL transaction (a multi-position batch) and a later-day large cbLTC case. These are NOT the six largest transactions globally.",
+  "source_run": 38753852107,
+  "source_event_count": 247,
+  "clarification": "This explicit selection rule supersedes the shorthand 'six largest distinct' in the collection script. Identity and repayment-size selection use already observed liquidation outcomes; no ex-ante detection or capture claimed.",
+  "no_funded_or_signed_transactions": true,
+  "excluded_holdout": "2026-10-03 through 2026-10-09"
+}
