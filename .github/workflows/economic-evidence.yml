@@ -1,4 +1,4 @@
-name: QT public economic evidence
+name: QT winner cash and complete borrower coverage
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -12,19 +12,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install pinned ABI-only Python dependencies
+      - name: Install pinned ABI and Keccak dependencies
         run: python3 -m pip install eth-abi==5.2.0 eth-utils==5.3.1 pycryptodome==3.23.0
       - name: Verify read-only boundary and integer arithmetic
         run: python3 -m unittest discover -s research -p 'test_*.py' -v
-      - name: Acquire bounded public states, offers, and conversion quotes
-        run: python3 research/public_economics.py
+      - name: Read frozen historical transactions and complete remaining borrowers
+        run: python3 research/winner_cash.py
+      - name: Archive exact source
+        if: always()
+        run: mkdir -p evidence/source && cp research/* evidence/source/
       - name: Save evidence including errors
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qt-economic-evidence
+          name: qt-winner-cash-evidence
           path: evidence/
           retention-days: 14
       - name: Print evidence summary
         if: always()
-        run: test ! -f evidence/summary.json || cat evidence/summary.json
+        run: test ! -f evidence/followup_summary.json || cat evidence/followup_summary.json
