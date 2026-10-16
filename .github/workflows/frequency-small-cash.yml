@@ -1,0 +1,35 @@
+name: QT small-ticket frequency and competition research
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: qt-small-ticket-rpc
+  cancel-in-progress: false
+jobs:
+  small-ticket:
+    runs-on: ubuntu-latest
+    timeout-minutes: 21
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline selection and read-only controls
+        run: python3 frequency/frequency_probe.py --self-test
+      - name: Pinned compiler wrapper
+        run: python3 -m pip install py-solc-x==2.0.5
+      - name: Three calendar-day censuses and six fixed small-size simulations
+        run: python3 frequency/frequency_probe.py
+      - name: Preserve exact source and partial results
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp frequency/frequency_probe.py evidence/source/
+          cp .github/workflows/frequency-small-cash.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-small-ticket-frequency
+          path: evidence/
+          retention-days: 14
