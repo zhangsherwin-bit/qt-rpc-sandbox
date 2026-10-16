@@ -1,4 +1,4 @@
-name: QT read-only blockchain API/RPC probe
+name: QT phase2 real-state cash tests
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -6,29 +6,29 @@ on:
 permissions:
   contents: read
 jobs:
-  inspect:
-    name: Morpho and Base connectivity
+  examine:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Offline allowlist and failure-mode tests
-        run: python3 -m unittest discover -s tests -v
-      - name: Read-only public GET and JSON-RPC POST
-        run: python3 src/qt_probe.py
-        env:
-          QT_OUTPUT_DIR: evidence
-      - name: Preserve provider observations
+      - name: Offline checks
+        run: python3 -m unittest discover -s phase2 -p 'test_*.py' -v
+      - name: Compiler helper
+        continue-on-error: true
+        run: python3 -m pip install py-solc-x==2.0.5
+      - name: Compile research probe, preserving failure status
+        run: python3 phase2/compile_probe.py
+      - name: Public bounded state and cash tests
+        run: python3 phase2/run.py --run-public --max-requests 300 --max-markets 12 --max-positions 32
+      - name: Save raw responses, sources and compiler evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qt-public-api-rpc-evidence
-          path: evidence/
+          name: qt-phase2-cash-evidence
+          path: phase2/
           retention-days: 7
-      - name: Human-readable summary
+      - name: Evidence boundary
         if: always()
-        run: |
-          echo '--- QT read-only result ---'
-          if test -e evidence/report.json; then cat evidence/report.json; else echo 'No report was generated'; fi
+        run: echo 'Read SUMMARY.json and compile status. A green job is not profit. No transactions were signed or sent.'
