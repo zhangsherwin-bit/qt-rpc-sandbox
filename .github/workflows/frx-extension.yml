@@ -1,0 +1,33 @@
+name: QT frxUSD size and later-event falsification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['frx_extension/**', '.github/workflows/frx-extension.yml']
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline failure-mode and plan tests
+        run: python3 -m unittest discover -s frx_extension -p 'test_*.py' -v
+      - name: Pinned compiler wrapper
+        run: python3 -m pip install py-solc-x==2.0.5
+      - name: Ten frozen cash simulations and two bounded transaction traces
+        run: python3 frx_extension/run.py
+      - name: Preserve exact research source and partial results
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp frx_extension/*.py evidence/source/
+          cp .github/workflows/frx-extension.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-frx-size-recurrence
+          path: evidence/
+          retention-days: 14
