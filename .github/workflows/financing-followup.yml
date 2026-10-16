@@ -1,0 +1,33 @@
+name: QT exact-size funding and legitimate receiver checks
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['src/followup.py', '.github/workflows/financing-followup.yml']
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline tests and syntax
+        run: |
+          python3 -m unittest discover -s tests -v
+          python3 -m py_compile src/followup.py
+      - name: Bounded read-only observations
+        run: python3 src/followup.py
+      - name: Preserve source and failures
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp src/research.py src/followup.py tests/test_research.py evidence/source/
+          cp .github/workflows/financing-followup.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-funding-and-gate-followup
+          path: evidence/
+          retention-days: 14
