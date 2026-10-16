@@ -1,0 +1,35 @@
+name: QT standalone market purchase and redemption
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['standalone/**', '.github/workflows/standalone-conversion.yml']
+permissions:
+  contents: read
+jobs:
+  conversion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pinned compiler and ABI dependencies
+        run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
+      - name: Original source controls and new syntax
+        run: |
+          python3 -m unittest discover -s replay -p 'test_*.py' -v
+          python3 -m py_compile standalone/run_conversion.py
+      - name: Fixed-size three-state cash-conversion test
+        run: python3 standalone/run_conversion.py
+      - name: Preserve exact source and errors
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp replay/run.py standalone/run_conversion.py standalone/ConversionProbe.sol evidence/source/
+          cp .github/workflows/standalone-conversion.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-standalone-conversion
+          path: evidence/
+          retention-days: 14
