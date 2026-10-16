@@ -1,0 +1,31 @@
+name: QT cash-claim vault permissions and liquidity
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['vaultcheck/**', '.github/workflows/vault-views.yml']
+permissions:
+  contents: read
+jobs:
+  vault-views:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0
+      - name: View and failure controls
+        run: python3 -m unittest discover -s vaultcheck -p 'test_*.py' -v
+      - name: Pinned-block views only
+        run: python3 vaultcheck/run.py
+      - name: Preserve code and partial evidence
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp vaultcheck/*.py .github/workflows/vault-views.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-vault-permissions-liquidity
+          path: evidence/
+          retention-days: 14
