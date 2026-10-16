@@ -1,0 +1,35 @@
+name: QT full wrapper conversion and producer settlement
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['settlement/**', '.github/workflows/complete-settlement.yml']
+permissions:
+  contents: read
+jobs:
+  settlement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pinned compiler and ABI dependencies
+        run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
+      - name: Source and ABI controls
+        run: |
+          python3 -m unittest discover -s replay -p 'test_*.py' -v
+          python3 -m py_compile settlement/run_settlement.py
+      - name: Complete historical settlement with cash and native accounting
+        run: python3 settlement/run_settlement.py
+      - name: Preserve exact source and failures
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp replay/run.py replay/WrapperCashProbe.sol settlement/run_settlement.py settlement/SettlementProbe.sol evidence/source/
+          cp .github/workflows/complete-settlement.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-complete-wrapper-settlement
+          path: evidence/
+          retention-days: 14
