@@ -1,0 +1,32 @@
+name: QT vault permissions and wrapper winner economics
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['src/research.py', 'tests/test_research.py', '.github/workflows/followthrough.yml']
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline controls
+        run: python3 -m unittest discover -s tests -v
+      - name: Bounded public observations and read-only simulations
+        run: python3 src/research.py
+      - name: Preserve exact source
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp src/research.py tests/test_research.py evidence/source/
+          cp .github/workflows/followthrough.yml evidence/source/
+      - name: Export all evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-vault-and-wrapper-followthrough
+          path: evidence/
+          retention-days: 14
