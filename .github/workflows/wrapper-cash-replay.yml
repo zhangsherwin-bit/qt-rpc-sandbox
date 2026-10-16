@@ -1,15 +1,18 @@
-name: QT wrapper full cash replay
+name: QT wrapper paced cash continuation
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths: ['replay/**', '.github/workflows/wrapper-cash-replay.yml']
   workflow_dispatch:
+concurrency:
+  group: qt-wrapper-cash-single-run
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
   replay:
     runs-on: ubuntu-latest
-    timeout-minutes: 17
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,8 +21,10 @@ jobs:
         run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
       - name: Offline source and ABI controls
         run: python3 -m unittest discover -s replay -p 'test_*.py' -v
-      - name: Historical shared-state cash replay
-        run: python3 replay/run.py
+      - name: Allow previous diagnostic to finish and provider window to reset
+        run: sleep 180
+      - name: Serial unfinished historical tests with conservative pacing
+        run: python3 replay/slower_continuation.py
       - name: Preserve source
         if: always()
         run: |
@@ -28,6 +33,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: qt-wrapper-cash-replay
+          name: qt-wrapper-paced-continuation
           path: evidence/
           retention-days: 14
