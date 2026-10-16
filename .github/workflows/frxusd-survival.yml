@@ -1,0 +1,33 @@
+name: QT fixed-route frxUSD cash survival
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['persistence/**', '.github/workflows/frxusd-survival.yml']
+permissions:
+  contents: read
+jobs:
+  survival:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pinned research dependencies
+        run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
+      - name: Cash-accounting controls
+        run: python3 -m unittest discover -s persistence -p 'test_*.py' -v
+      - name: Fixed-size canonical-state execution comparisons
+        run: python3 persistence/run_survival.py
+      - name: Preserve exact research code
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp persistence/*.py evidence/source/
+          cp .github/workflows/frxusd-survival.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-frxusd-fixed-route-survival
+          path: evidence/
+          retention-days: 14
