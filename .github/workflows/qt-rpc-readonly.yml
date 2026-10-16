@@ -1,0 +1,27 @@
+name: QT unlisted collateral and cash-claim screen
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  examine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: ABI comparison dependency
+        run: python3 -m pip install eth-abi==5.2.0
+      - name: Offline checks and independent ABI comparison
+        run: python3 -m unittest discover -s phase2 -p 'test_*.py' -v
+      - name: Public bounded unlisted market views
+        run: python3 phase2/explore_unlisted.py
+      - name: Preserve raw observations and exact source
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-unlisted-collateral-evidence
+          path: phase2/
+          retention-days: 7
