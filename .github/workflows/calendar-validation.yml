@@ -1,0 +1,36 @@
+name: QT pool-calendar validation and discovery sizing
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['calendar_probe/**', '.github/workflows/calendar-validation.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-public-rpc-calendar
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline selection and boundary tests
+        run: python3 calendar_probe/run.py --self-test
+      - name: Pinned compiler wrapper
+        run: python3 -m pip install py-solc-x==2.0.5
+      - name: Calendar census and at most six exact cash simulations
+        run: python3 calendar_probe/run.py
+      - name: Preserve source and plan even after failure
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp calendar_probe/run.py evidence/source/calendar_test.py
+          cp .github/workflows/calendar-validation.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-pool-calendar-validation
+          path: evidence/
+          retention-days: 14
