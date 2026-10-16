@@ -17,8 +17,8 @@ jobs:
         run: python3 -m unittest discover -s direct_exit -p 'test_*.py' -v
       - name: Pinned compiler wrapper
         run: python3 -m pip install py-solc-x==2.0.5
-      - name: Five fixed historical route and size comparisons
-        run: python3 direct_exit/run.py
+      - name: Five fixed route-size cases and exact first-transaction follow-up
+        run: python3 direct_exit/causal.py
       - name: Preserve exact source and partial results
         if: always()
         run: |
