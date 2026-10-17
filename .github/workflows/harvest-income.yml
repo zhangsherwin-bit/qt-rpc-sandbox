@@ -1,0 +1,32 @@
+name: QT broad harvest service capacity screen
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['harvest_income/**', '.github/workflows/harvest-income.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-harvest-income
+  cancel-in-progress: false
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s harvest_income -p 'test_*.py' -v
+      - run: python3 harvest_income/screen.py
+      - name: Preserve sources and partial observations
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp harvest_income/*.py evidence/source/
+          cp .github/workflows/harvest-income.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-harvest-service-capacity
+          path: evidence/
+          retention-days: 14
