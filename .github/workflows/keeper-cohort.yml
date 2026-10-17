@@ -1,0 +1,59 @@
+name: QT independent-day keeper cash economics
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'cohort/**'
+      - '.github/workflows/keeper-cohort.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-public-ethereum-keeper-research
+  cancel-in-progress: false
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-four-angle-census
+          path: input_census
+          run-id: 39016955510
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-four-angle-cash-services
+          path: input_services
+          run-id: 39019940454
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-keeper-repaired-cash
+          path: input_repair
+          run-id: 39050314384
+          github-token: ${{ github.token }}
+      - name: Install pinned simulation libraries
+        run: python3 -m pip install eth-abi==5.2.0 pycryptodome==3.23.0 py-solc-x==2.0.5
+      - name: Offline cohort tests
+        run: python3 -m unittest discover -s cohort -p 'test_*.py' -v
+      - name: Run canonical historical cash replays
+        run: python3 cohort/run_cohort.py
+      - name: Retain failures and exact tested source
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp cohort/*.py cohort/selection.json evidence/source/
+          cp .github/workflows/keeper-cohort.yml evidence/source/
+          if test -f evidence/COHORT_REPORT.json; then cat evidence/COHORT_REPORT.json; fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-keeper-four-day-cash
+          path: evidence/
+          retention-days: 14
