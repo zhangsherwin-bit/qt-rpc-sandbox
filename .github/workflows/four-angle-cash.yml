@@ -35,12 +35,12 @@ jobs:
       - name: Compile and test complete cash paths
         env:
           QT_STAGE: ${{ matrix.stage }}
-        run: python3 angles_probe/execute.py
+        run: python3 angles_probe/complete.py
       - name: Preserve compiled source, raw observations and failures
         if: always()
         run: |
           mkdir -p evidence/source
-          cp angles_probe/* evidence/source/
+          cp angles_probe/*.py angles_probe/*.sol evidence/source/
           cp angles/census.py evidence/source/census_client.py
           cp .github/workflows/four-angle-cash.yml evidence/source/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
