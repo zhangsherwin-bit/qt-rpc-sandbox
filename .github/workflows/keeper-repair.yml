@@ -1,4 +1,4 @@
-name: QT keeper repair and measured cash exits
+name: QT blob-complete keeper cash execution
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -29,13 +29,19 @@ jobs:
           path: input_services
           run-id: 39019940454
           github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-keeper-repaired-cash
+          path: input_repair
+          run-id: 39050314384
+          github-token: ${{ github.token }}
       - name: Pinned compiler and ABI utilities
         run: python3 -m pip install eth-abi==5.2.0 pycryptodome==3.23.0 py-solc-x==2.0.5
-      - name: Offline scope and source tests
+      - name: Offline scope and blob regression tests
         run: python3 -m unittest discover -s followthrough -p 'test_*.py' -v
-      - name: Execute scoped historical cash tests
-        run: python3 followthrough/run.py
-      - name: Preserve source and partial evidence
+      - name: Finish frozen complete cash tests
+        run: python3 followthrough/prefix_finish.py
+      - name: Preserve exact source and partial evidence
         if: always()
         run: |
           mkdir -p evidence/source
@@ -46,6 +52,6 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: qt-keeper-repaired-cash
+          name: qt-keeper-prefix-completed
           path: evidence/
           retention-days: 14
