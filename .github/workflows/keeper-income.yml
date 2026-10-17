@@ -1,4 +1,4 @@
-name: QT Curve keeper revenue and cash-exit census
+name: QT paginated keeper revenue and cash-exit census
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -19,8 +19,8 @@ jobs:
       - name: Shared transport and decoder tests
         run: |
           python3 -m unittest discover -s service_income -p 'test_*.py' -v
-          python3 -m py_compile keeper_income/census.py
-      - run: python3 keeper_income/census.py
+          python3 -m py_compile keeper_income/census.py keeper_income/run_paged.py
+      - run: python3 keeper_income/run_paged.py
       - name: Preserve sources
         if: always()
         run: |
@@ -31,6 +31,6 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: qt-keeper-reward-census
+          name: qt-paginated-keeper-reward-census
           path: evidence/
           retention-days: 14
