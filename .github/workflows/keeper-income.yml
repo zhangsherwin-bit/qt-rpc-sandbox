@@ -1,0 +1,36 @@
+name: QT Curve keeper revenue and cash-exit census
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['keeper_income/**', '.github/workflows/keeper-income.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-eth-readonly-research
+  cancel-in-progress: false
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Shared transport and decoder tests
+        run: |
+          python3 -m unittest discover -s service_income -p 'test_*.py' -v
+          python3 -m py_compile keeper_income/census.py
+      - run: python3 keeper_income/census.py
+      - name: Preserve sources
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp keeper_income/*.py evidence/source/
+          cp service_income/reward_census.py evidence/source/
+          cp .github/workflows/keeper-income.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-keeper-reward-census
+          path: evidence/
+          retention-days: 14
