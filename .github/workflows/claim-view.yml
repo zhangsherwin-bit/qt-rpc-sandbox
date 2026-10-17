@@ -1,0 +1,32 @@
+name: QT documented helper and three-vault public view census
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['research/view_followup.py', 'research/test_views.py', '.github/workflows/claim-view.yml']
+permissions:
+  contents: read
+jobs:
+  view-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned decoding libraries
+        run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0
+      - name: Getter-only boundaries and arithmetic tests
+        run: python3 -m unittest discover -s research -p 'test_views.py' -v
+      - name: Public read-only collection
+        run: python3 research/view_followup.py
+      - name: Preserve exact sources and partial results
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp research/view_followup.py research/test_views.py .github/workflows/claim-view.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-three-vault-readonly-evidence
+          path: evidence/
+          retention-days: 14
