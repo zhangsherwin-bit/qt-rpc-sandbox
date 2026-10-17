@@ -1,4 +1,4 @@
-name: QT actual small-flow route comparison
+name: QT corrected context and frozen route matrix
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -22,8 +22,8 @@ jobs:
         run: python3 -m unittest discover -s frequency_screen -p 'test_*.py' -v
       - name: Pinned compiler wrapper
         run: python3 -m pip install py-solc-x==2.0.5
-      - name: Collect fixed state matrix and attempt selected cash routes
-        run: python3 frequency_screen/run_study.py
+      - name: Run unchanged matrix with explicit historical gas price
+        run: python3 frequency_screen/run_fee_context.py
       - name: Preserve exact code and all partial results
         if: always()
         run: |
@@ -33,6 +33,6 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: qt-frequency-route-screen
+          name: qt-corrected-frequency-screen
           path: evidence/
           retention-days: 14
