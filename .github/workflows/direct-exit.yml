@@ -1,0 +1,33 @@
+name: QT direct cash exit and larger-size comparison
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['direct_exit/**', '.github/workflows/direct-exit.yml']
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline exact-transformation tests
+        run: python3 -m unittest discover -s direct_exit -p 'test_*.py' -v
+      - name: Pinned compiler wrapper
+        run: python3 -m pip install py-solc-x==2.0.5
+      - name: Five fixed route-size cases and exact first-transaction follow-up
+        run: python3 direct_exit/causal.py
+      - name: Preserve exact source and partial results
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp direct_exit/*.py evidence/source/
+          cp .github/workflows/direct-exit.yml evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qt-direct-exit-capacity
+          path: evidence/
+          retention-days: 14
