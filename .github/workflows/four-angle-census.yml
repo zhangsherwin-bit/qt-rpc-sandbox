@@ -1,0 +1,43 @@
+name: QT four-angle full-window income census
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['angles/**', '.github/workflows/four-angle-census.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-four-angle-ethereum-research
+  cancel-in-progress: false
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install ABI and hashing utilities
+        run: python3 -m pip install eth-abi==5.2.0 pycryptodome==3.23.0
+      - name: Syntax and scope checks
+        run: |
+          python3 -m py_compile angles/census.py
+          python3 - <<'PY'
+          from angles.census import START, END, ALLOWED, FACTORIES, KEEPERS, TMS
+          assert END-START == 21*86400
+          assert not any('send' in x.lower() or 'sign' in x.lower() for x in ALLOWED)
+          assert len(FACTORIES)==4 and len(KEEPERS)==4 and len(TMS)==3
+          PY
+      - name: Complete scoped discovery and event census
+        run: python3 angles/census.py
+      - name: Preserve code and all outcomes
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp angles/*.py evidence/source/
+          cp .github/workflows/four-angle-census.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-four-angle-census
+          path: evidence/
+          retention-days: 14
