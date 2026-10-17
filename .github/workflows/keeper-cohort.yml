@@ -1,0 +1,62 @@
+name: QT keeper portfolio cash replication
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'keeper_cohort/**'
+      - '.github/workflows/keeper-cohort.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-four-angle-ethereum-research
+  cancel-in-progress: false
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-four-angle-census
+          path: input_census
+          run-id: 39016955510
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-four-angle-cash-services
+          path: input_services
+          run-id: 39019940454
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-keeper-repaired-cash
+          path: input_repair
+          run-id: 39050314384
+          github-token: ${{ github.token }}
+      - name: Pinned ABI/compilation utilities
+        run: python3 -m pip install eth-abi==5.2.0 pycryptodome==3.23.0 py-solc-x==2.0.5
+      - name: Validate original corpus, rewards and frozen event choices
+        run: |
+          python3 -m unittest discover -s keeper_cohort -p 'test_*.py' -v
+          python3 keeper_cohort/replicate.py --check-only
+      - name: Replay five independent-date historical cash settlements
+        run: python3 keeper_cohort/replicate.py
+      - name: Preserve all available cash results, exceptions and exact source
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp keeper_cohort/*.py evidence/source/
+          cp .github/workflows/keeper-cohort.yml evidence/source/
+          cp followthrough/{prefix_finish.py,run.py,logic.py} evidence/source/
+          cp angles_probe/execute.py evidence/source/
+          if test -f evidence/SUMMARY.json; then python3 -m json.tool evidence/SUMMARY.json | head -c 8000; fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-keeper-cohort-replay
+          path: evidence/
+          retention-days: 14
