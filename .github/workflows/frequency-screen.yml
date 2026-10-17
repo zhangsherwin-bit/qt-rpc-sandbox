@@ -1,0 +1,38 @@
+name: QT corrected context and frozen route matrix
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'frequency_screen/**'
+      - '.github/workflows/frequency-screen.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-frequency-screen
+  cancel-in-progress: false
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline research controls
+        run: python3 -m unittest discover -s frequency_screen -p 'test_*.py' -v
+      - name: Pinned compiler wrapper
+        run: python3 -m pip install py-solc-x==2.0.5
+      - name: Run unchanged matrix with explicit historical gas price
+        run: python3 frequency_screen/run_fee_context.py
+      - name: Preserve exact code and all partial results
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp frequency_screen/*.py frequency_screen/*.sol frequency_screen/*.json evidence/source/
+          cp .github/workflows/frequency-screen.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-corrected-frequency-screen
+          path: evidence/
+          retention-days: 14
