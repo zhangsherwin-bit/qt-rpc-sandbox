@@ -1,0 +1,35 @@
+name: QT lower-rate permissionless service income census
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['service_income/**', '.github/workflows/service-income.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-base-service-rewards
+  cancel-in-progress: true
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s service_income -p 'test_*.py' -v
+      - name: Respect quiet period before lower-rate continuation
+        run: |
+          sleep 120
+          python3 service_income/run_cooldown.py
+      - name: Preserve sources and failures
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp service_income/*.py evidence/source/
+          cp .github/workflows/service-income.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-base-service-income-low-rate
+          path: evidence/
+          retention-days: 14
