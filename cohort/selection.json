@@ -1,0 +1,44 @@
+{
+  "selection_rule": "Retrospective development: exclude previously selected first/middle/last events; rank remaining real LP reward transfers, choose highest amount per distinct day with >=1.2M approximate prefix gas headroom; test top four days. Ranking was after observing rewards, not outcomes of candidate execution.",
+  "source_artifact": "qt-four-angle-census completed run 39016955510, 10 September–1 October 2026 exclusive",
+  "prior_excluded_txs": [
+    "0x3bb89f780cb33005531f501446d7f3dbc92017703da9604f07bc5e99f055bf65",
+    "0x46199ad11bfec9b686c6846e05b2665481eb2b96fef71f9ec840cc31c96084cf",
+    "0xfd7779247099a7ced3a6480dafd06d3fdf3846b310f30fbfbc82c892cddb0d03"
+  ],
+  "tokens_are_not_cash": true,
+  "cases": [
+    {
+      "id": "ranked_development_00",
+      "date": "2026-09-18",
+      "tx": "0x39fe5351f1be7667635fe0d32e98ef7f269dfb413981c66e1ba19ff1f76e19ce",
+      "block": 26003414,
+      "reward_lp_raw": "55394064769506521901",
+      "reward_lp_units": "55.394064769506521901"
+    },
+    {
+      "id": "ranked_development_01",
+      "date": "2026-09-16",
+      "tx": "0x15534588816de3dab27ea8999c3fd107aeeae1d6fcd3a521c079fc0eb34c54a9",
+      "block": 25987198,
+      "reward_lp_raw": "35528477837599819777",
+      "reward_lp_units": "35.528477837599819777"
+    },
+    {
+      "id": "ranked_development_02",
+      "date": "2026-09-11",
+      "tx": "0xb4c41be53d7cf9ea0635694b3d09048105b5d72a405b8c312de86b9f931559c3",
+      "block": 25954642,
+      "reward_lp_raw": "28467751064425389895",
+      "reward_lp_units": "28.467751064425389895"
+    },
+    {
+      "id": "ranked_development_03",
+      "date": "2026-09-30",
+      "tx": "0x94b2aa0a54d69a2c2ff92dedbda32d2e3b68ae8607a37bbe878e2d40e36ad3cc",
+      "block": 26090422,
+      "reward_lp_raw": "14176217833087333636",
+      "reward_lp_units": "14.176217833087333636"
+    }
+  ]
+}
