@@ -1,0 +1,37 @@
+name: QT Stage1 ERC4626 claim-to-cash mispricing
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'vault_claims/**'
+      - '.github/workflows/vault-claim-cash-screen.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-public-vault-claims
+  cancel-in-progress: false
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline finance/safety/scope regression tests
+        run: python3 -m unittest discover -s vault_claims -p 'test_*.py' -v
+      - name: Read vault markets and fixed-price quotes at canonical state
+        run: python3 vault_claims/scan.py
+      - name: Archive raw evidence, failures and test source
+        if: always()
+        run: |
+          mkdir -p vault_scan_evidence/source
+          cp vault_claims/*.py vault_scan_evidence/source/
+          cp .github/workflows/vault-claim-cash-screen.yml vault_scan_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-vault-share-cash-screen
+          path: vault_scan_evidence/
+          retention-days: 14
