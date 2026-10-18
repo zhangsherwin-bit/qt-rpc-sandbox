@@ -189,7 +189,7 @@ def main():
       c["quote_cash_out"].append(q)
       try:
        raw=read.rpc(chain,"exact_asset_to_base_quote","eth_call",[{"to":CHAINS[chain]["quoter"],
-          "data":"0x"+quote_data(c["asset"],base,int(c["coll_raw"]),fee)},hex(c["block"]-1)])
+          "data":quote_data(c["asset"],base,int(c["coll_raw"]),fee)},hex(c["block"]-1)])
        w=words(raw)
        if len(w)<1:raise ValueError("Missing amountOut")
        q["cash_out_base_raw"]=str(w[0])
