@@ -9,7 +9,7 @@ import screen as S
 S.OUT=Path('curve_exit_evidence');S.OUT.mkdir(exist_ok=True)
 OUT=S.OUT
 REG="0xf98b45fa17de75fb1aD0e7aFD971b0ca00e379fC".lower()
-V2FACTORY="0x5c69ee701ef814a2b6a3edd4b1652cb9cc5aa6f"
+V2FACTORY="0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f"
 POOL_USDC_CRVUSD="0x4dece678ceceb27446b35c672dc7d61f30bad69e"
 def one_call(addr,method,args,block,label):
     sel=S.h(method)[2:10]
