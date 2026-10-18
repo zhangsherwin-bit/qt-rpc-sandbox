@@ -1,0 +1,39 @@
+name: QT Stage1 GHO GSM real historical flash-funded cash settlement
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'gho_cash/**'
+      - '.github/workflows/gho-full-cash.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-gho-heavy-rpc
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned Solidity compiler interface
+        run: python3 -m pip install py-solc-x==2.0.5 pycryptodome==3.23.0
+      - name: Offline cash and simulation integrity tests
+        run: python3 -m unittest discover -s gho_cash -p 'test_*.py' -v
+      - name: Four zero-principal complete cash settlement historical simulations
+        run: python3 gho_cash/execute.py
+      - name: Retain source, raw simulated receipts and failed traces
+        if: always()
+        run: |
+          mkdir -p gho_cash_evidence/source
+          cp gho_cash/* gho_cash_evidence/source/
+          cp .github/workflows/gho-full-cash.yml gho_cash_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-gho-full-cash-independent-replay
+          path: gho_cash_evidence/
+          retention-days: 14
