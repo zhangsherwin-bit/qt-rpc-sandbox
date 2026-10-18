@@ -135,10 +135,10 @@ def scan_vault(chain,v,block):
                 if liq==0:row["status"]="EMPTY_POOL";continue
                 row["status"]="POOL_PRESENT"
                 for size in SIZES:
-                    quote=dict(fee=fee,spend_usdc_raw=size*10**6,
+                    quote={"fee":fee,"spend_usdc_raw":size*10**6,
                       "claim_cash_settled":False,"spent_input_amount_verified":False,
                       "source":"UniswapV3 quote + ERC4626 previewRedeem, same block",
-                      "network_financing_inclusion_costs_unmeasured":True)
+                      "network_financing_inclusion_costs_unmeasured":True}
                     record["quotes"].append(quote)
                     try:
                         amountOut,priceAfter,ticks,gas=quoter(chain,address,size*10**6,fee,block)
