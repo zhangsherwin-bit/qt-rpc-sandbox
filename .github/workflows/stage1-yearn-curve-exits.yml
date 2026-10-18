@@ -1,0 +1,43 @@
+name: QT Stage1 Yearn actual collateral alternate exits
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'yearn_curve/**'
+      - '.github/workflows/stage1-yearn-curve-exits.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-stage1-yearn-public-data-reads
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-stage1-yearn-rsup-dola-cash-quotes
+          path: input_quotes
+          run-id: 39123624602
+          github-token: ${{ github.token }}
+      - name: Install public ABI helper
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline input and algebra checks
+        run: python3 -m unittest discover -s yearn_curve -p 'test_*.py' -v
+      - name: Read-only historical Curve and Uniswap v2 cash alternative quotes
+        run: python3 yearn_curve/alt.py
+      - name: Save all raw responses and code including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-yearn-curve-univ2-alternatives
+          path: |
+            curve_exit_evidence/
+            yearn_curve/
+          retention-days: 14
