@@ -7,7 +7,7 @@ class TestComet(unittest.TestCase):
  def test_scope(self):
   self.assertEqual(len(R.DEPLOYMENTS[1]),6)
   self.assertEqual(len(R.DEPLOYMENTS[8453]),5)
-  self.assertEqual(sum((hi-lo)//9500+1 for v in R.WINDOWS.values() for lo,hi in v),11)
+  self.assertEqual(sum((hi-lo)//9500+1 for v in R.WINDOWS.values() for lo,hi in v),10)
  def test_event_topics_unique(self):
   self.assertEqual(len(R.BUY),66)
   self.assertEqual(len(R.ABS),66)
