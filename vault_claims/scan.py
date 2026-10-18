@@ -10,7 +10,7 @@ OUT=Path("vault_scan_evidence");OUT.mkdir(exist_ok=True)
 USDC={1:"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       8453:"0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"}
 RPC={1:"https://rpc-eth.blockmachine.io",8453:"https://mainnet.base.org"}
-FACTORY="0x1f98431c8ad98523631ae4a59f267346ea31f984"
+FACTORY={1:"0x1f98431c8ad98523631ae4a59f267346ea31f984",8453:"0x33128a8fc17869897dce68ed026d694621f6fdfd"}
 QUOTER={1:"0x61ffe014ba17989e743c5f6cb21bf9697530b21e",8453:"0x3d4e44eb1374240ce5f1b871ab261cd16335b76a"}
 FEE_TIERS=(100,500,3000,10000)
 SIZES=(500,5000,25000)
@@ -126,7 +126,7 @@ def scan_vault(chain,v,block):
             record["pools"].append(row)
             try:
                 data=signature("getPool(address,address,uint24)")+arg_addr(USDC[chain])+arg_addr(address)+word(fee)
-                pool=decode_address(call(chain,"factory_get_pool",FACTORY,data,block))
+                pool=decode_address(call(chain,"factory_get_pool",FACTORY[chain],data,block))
                 row["pool"]=pool
                 if int(pool,16)==0:
                     row["status"]="NO_POOL";continue
