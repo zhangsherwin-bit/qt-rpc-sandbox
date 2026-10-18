@@ -1,0 +1,31 @@
+name: QT Across refund root causal chronology
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'across_root/**'
+      - '.github/workflows/stage1-across-root-chronology.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Fixed-event chronology regression tests
+        run: python3 -m unittest discover -s across_root -p 'test_*.py' -v
+      - name: Query real root challenge and deposit/refund timestamp
+        run: python3 across_root/chronology.py
+      - name: Save all errors and original RPC evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-across-refund-root-chronology
+          path: |
+            chronology_evidence/
+            across_root/
+          retention-days: 14
