@@ -1,0 +1,47 @@
+name: QT Stage1 multi-market Comet collateral sale census
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'comet_search/**'
+      - '.github/workflows/comet-multimarket.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-compound-comet-readonly
+  cancel-in-progress: false
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 42
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline event and ABI consistency tests
+        run: python3 -m unittest discover -s comet_search -p 'test_*.py' -v
+      - name: Frozen Ethereum and Base event calendar plus exact historical cash quotes
+        run: python3 comet_search/census.py
+      - name: Preserve every result, failure and source file
+        if: always()
+        run: |
+          mkdir -p comet_evidence/source
+          cp comet_search/*.py comet_evidence/source/
+          cp .github/workflows/comet-multimarket.yml comet_evidence/source/
+          if test -f comet_evidence/REPORT.json; then
+            python3 - <<'PY'
+          import json
+          x=json.load(open('comet_evidence/REPORT.json'))
+          print(json.dumps({'complete':x.get('complete'),'counts':x.get('counts'),
+            'choices':len(x.get('choices',[])),'positive_quote_rows':x.get('positive_gross_quote_rows'),
+            'requests':x.get('requests'),'provider_denied':x.get('provider_denied')}))
+          PY
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-comet-eight-markets
+          path: comet_evidence/
+          retention-days: 14
