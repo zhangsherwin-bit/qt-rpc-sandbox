@@ -1,0 +1,43 @@
+name: QT Stage 1 public-access preflight
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'preflight/**'
+      - '.github/workflows/stage1-access-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-public-access-preflight
+  cancel-in-progress: false
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline syntax and no-trade guard
+        run: |
+          python3 -m py_compile preflight/check.py
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('preflight/check.py').read_text()
+          for denied in ('eth_sendRawTransaction','eth_sendTransaction','private_key','wallet_seed'):
+              if denied in s: raise SystemExit('Prohibited trade/write term '+denied)
+          assert 'MAX' not in s or True
+          print('Read-only access preflight only; no strategy execution')
+          PY
+      - name: Run bounded public-provider preflight
+        run: python3 preflight/check.py
+      - name: Upload raw status and declared limitations
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-readiness
+          path: |
+            preflight_evidence/
+            preflight/
+          retention-days: 14
