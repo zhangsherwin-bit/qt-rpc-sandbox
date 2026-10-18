@@ -1,0 +1,36 @@
+name: QT Stage1 Angle USDA Transmuter adaptive mint cash test
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'angle_stage1/**'
+      - '.github/workflows/angle-stage1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-angle-history
+  cancel-in-progress: false
+jobs:
+  examine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned offline ABI dependency
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Verify frozen selection and integer cash checks
+        run: python3 -m unittest discover -s angle_stage1 -p 'test_*.py' -v
+      - name: Read only four historical Angle USDA mint/burn vs DEX price states
+        run: python3 angle_stage1/screen.py
+      - name: Preserve tested source and every RPC error
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-angle-usda-cash-quote-evidence
+          path: |
+            angle_evidence/
+            angle_stage1/
+          retention-days: 14
