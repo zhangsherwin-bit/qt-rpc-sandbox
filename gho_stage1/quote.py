@@ -5,14 +5,13 @@ import urllib.request,urllib.error,json,time,hashlib,traceback,datetime
 from Crypto.Hash import keccak
 from pathlib import Path
 OUT=Path("gho_evidence");OUT.mkdir(parents=True,exist_ok=True)
-RPC="https://rpc-eth.blockmachine.io"
-USDC="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
-GHO="0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+RPC="https://arb1.arbitrum.io/rpc"
+USDC="0xaf88d065e77c8cc2239327c5edb3a432268e5831"
+GHO="0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33"
 QUOTER="0x61ffe014ba17989e743c5f6cb21bf9697530b21e"
 MODULES=[
- {"name":"current_aave_address_book_USDC","address":"0x3a3868898305f04bec7fea77becff04c13444112"},
- {"name":"prior_seized_control_USDC","address":"0xfeeb6fe430b7523fef2a38327241ee7153779535"}]
-BLOCKS=[26090422,26220131]
+ {"name":"aave_address_book_arbitrum_USDCn","address":"0x1aee7a618b0cc687cced9ab796e464062f1508ca"}]
+BLOCKS=[8192,64]
 AMOUNTS=[100,1000,10000,100000]
 FEES=[100,500,3000]
 count=0;stopped=False;t0=time.monotonic()
@@ -28,7 +27,7 @@ def words(h):
 def read(name,method,params):
  global count,stopped
  if stopped:raise RuntimeError("Stopped after denial")
- if method not in ("eth_chainId","eth_getBlockByNumber","eth_getCode","eth_call"):raise ValueError("Not readonly")
+ if method not in ("eth_chainId","eth_blockNumber","eth_getBlockByNumber","eth_getCode","eth_call"):raise ValueError("Not readonly")
  if count>=128 or time.monotonic()-t0>1050:raise RuntimeError("Research budget")
  count+=1;time.sleep(1)
  buf=b"";meta={"n":count,"name":name,"method":method}
@@ -64,15 +63,17 @@ def quote_exact_input(amount_gho,fee,block,basefee):
  return words(r)[0]
 def main():
  rep={"research_only":True,"full_atomic_cash_execution":False,
-      "scope":"Current and explicitly retired Aave mainnet GHO GSM USDC addresses, two fixed historical states, bidirectional cash quotes",
+      "scope":"Official Aave Arbitrum GHO USDCn GSM address, two pinned historical states, bidirectional cash quotes",
       "uncertainties":["A former GSM can be seized or superseded; deployed code and live gating checked separately",
        "Two quoted legs start from one canonical block but do not run sequentially",
        "No builder bid, failed-attempt costs, upfront gas, or executed reward included",
        "Expired or restricted primary conversion capacity is not counted as available money"],
       "cases":[],"completed":False};write("REPORT.json",rep)
  try:
-  if int(read("chain","eth_chainId",[]),16)!=1:raise ValueError("Wrong chain")
-  for block in BLOCKS:
+  if int(read("chain","eth_chainId",[]),16)!=42161:raise ValueError("Wrong chain")
+  latest=int(read("latest","eth_blockNumber",[]),16)
+  for age in BLOCKS:
+   block=latest-age
    h=read("header","eth_getBlockByNumber",[hex(block),False]);fee0=int(h["baseFeePerGas"],16)
    for m in MODULES:
     row={"block":block,"utc":datetime.datetime.fromtimestamp(int(h["timestamp"],16),datetime.timezone.utc).isoformat(),
