@@ -113,7 +113,7 @@ def run_case(r,h,prefix,receipts,code,fee,matched):
     else:
         if a[4:]!=b[4:]:raise ValueError("Failed call modified cash/beneficiary/coinbase")
         record.update(error=trade.get("error"),rollback_verified=True,
-          "no_profit_observed":True)
+          no_profit_observed=True)
     save("cases/"+label+".json",{"header":h,"calls":calls,"record":record})
     return record
 
