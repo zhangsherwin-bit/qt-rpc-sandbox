@@ -1,0 +1,52 @@
+name: QT Stage 1 Across repayment and older cohort round 2
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'across_round2/**'
+      - '.github/workflows/stage1-across-round2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-stage1-across-repayment-reads
+  cancel-in-progress: false
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 29
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-stage1-empirical-api
+          path: input_api
+          run-id: 39102389625
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-stage1-refund-reserves
+          path: input_prior
+          run-id: 39109034518
+          github-token: ${{ github.token }}
+      - name: Offline canonical selection and ABI tests
+        run: |
+          python3 -m unittest discover -s across_round2 -p 'test_*.py' -v
+          python3 -m unittest discover -s stage1_followup -p 'test_*.py' -v
+      - name: Targeted historical refund leaf scan and receipts
+        run: python3 across_round2/settle.py
+      - name: Preserve evidence including incomplete branches
+        if: always()
+        run: |
+          mkdir -p round2_evidence/source
+          cp across_round2/*.py round2_evidence/source/
+          cp .github/workflows/stage1-across-round2.yml round2_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-across-12-relay-cash-round2
+          path: round2_evidence/
+          retention-days: 14
