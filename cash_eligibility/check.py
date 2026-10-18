@@ -7,7 +7,7 @@ from pathlib import Path
 from Crypto.Hash import keccak
 OUT=Path("claim_eligibility_evidence");OUT.mkdir(exist_ok=True)
 CORE="0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
-RPC={8453:"https://mainnet.base.org",1:"https://ethereum-rpc.publicnode.com"}
+RPC={8453:"https://base-rpc.publicnode.com",1:"https://ethereum-rpc.publicnode.com"}
 API="https://api.morpho.org/graphql"
 MARKETS=[
  {"name":"yoETH_WETH_Base","chain":8453,"id":"0x94f344f8db8c950faa45206c269dd0c2787a86ae3a7b988423e1e6e8173ae269",
@@ -42,7 +42,7 @@ def parse_address(s):
 def request(name,url,payload,chain=None):
  global NUM
  host=urllib.parse.urlsplit(url).netloc
- if host not in {"api.morpho.org","mainnet.base.org","ethereum-rpc.publicnode.com"}:raise ValueError("unapproved provider")
+ if host not in {"api.morpho.org","base-rpc.publicnode.com","ethereum-rpc.publicnode.com"}:raise ValueError("unapproved provider")
  if host in DENIED:raise RuntimeError("Provider refused access; stopping host")
  key=json.dumps([url,payload],sort_keys=True)
  if key in CACHE:return CACHE[key]
@@ -148,11 +148,11 @@ def main():
      "USD3 withdrawals depend on liquidity and ring-fenced reserves; availability must be contract verified",
      "Borrow amount is market outstanding principal, not collateral eligible for seizure",
      "API borrowing health is discovery only; onchain state, oracle and callback must be validated",
-     "Three small historical log windows per market are not an exhaustive liquidation census"],
+     "No historical log census attempted in this liquidity-first run; eligibility and historic recurrence remain unknown"],
    "markets":[],"errors":[],"complete":False}
  save("REPORT.json",report)
  try:
-  for ch in (8453,1):
+  for ch in (1,8453):
    if int(rpc(ch,"chain_id","eth_chainId",[]),16)!=ch:raise ValueError("Wrong network")
    h=rpc(ch,"header_pin","eth_getBlockByNumber",["latest",False])
    block=int(h["number"],16)
@@ -161,7 +161,7 @@ def main():
     report["markets"].append(row);save("REPORT.json",report)
     row["api_positions"]=gql_positions(m)
     row["onchain_cash_views"]=diagnostic_views(m,block)
-    row["historical_liquidations_sample"]=historical_events(m,block)
+    row["historical_liquidations_sample"]=[{"status":"DEFERRED_TO_SEPARATE_BOUNDED_LOG_CENSUS","reason":"Avoid provider rate-limit before retrieving cash withdrawal and borrower eligibility evidence"}]
     save("REPORT.json",report)
    header_check=rpc(ch,"header_recheck","eth_getBlockByNumber",[h["number"],False])
    if header_check["hash"]!=h["hash"]:raise ValueError("Blockchain pin changed")
