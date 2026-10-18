@@ -1,0 +1,50 @@
+name: QT Stage1 complete omitted Ethereum sale inventory
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['inventory_completion/**', '.github/workflows/stage1-comet-completion.yml']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-stage1-refund-reserve-readonly
+  cancel-in-progress: false
+jobs:
+  finish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-stage1-refund-reserves
+          path: input_previous
+          run-id: 39109034518
+          github-token: ${{ github.token }}
+      - name: Ensure block rechecks really contact provider
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('stage1_followup/study.py');s=p.read_text()
+          old='        if key in self.cache:return self.cache[key]'
+          assert s.count(old)==1
+          s=s.replace(old,"        if key in self.cache and not name.startswith('recheck'):return self.cache[key]")
+          p.write_text(s)
+      - name: Offline scope and data-integrity controls
+        run: python3 -m unittest discover -s inventory_completion -p 'test_*.py' -v
+      - name: Read missing asset inventories and explain unavailable quotations
+        run: python3 inventory_completion/finish.py
+      - name: Preserve exact source
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp inventory_completion/*.py stage1_followup/study.py stage1_followup/keccak_view.py evidence/source/
+          cp .github/workflows/stage1-comet-completion.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-comet-inventory-complete
+          path: evidence/
+          retention-days: 14
