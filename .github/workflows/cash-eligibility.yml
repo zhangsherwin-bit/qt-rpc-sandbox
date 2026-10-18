@@ -1,0 +1,38 @@
+name: QT Stage1 USD3 yoETH borrowing-collateral cash eligibility
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'cash_eligibility/**'
+      - '.github/workflows/cash-eligibility.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-claim-eligibility
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Freeze exact candidate and no-trade controls
+        run: python3 -m unittest discover -s cash_eligibility -p 'test_*.py' -v
+      - name: Reconcile real collateral liquidity and borrower snapshots
+        run: python3 cash_eligibility/check.py
+      - name: Save all unknowns, canonical calls and tested source
+        if: always()
+        run: |
+          mkdir -p claim_eligibility_evidence/source
+          cp cash_eligibility/*.py claim_eligibility_evidence/source/
+          cp .github/workflows/cash-eligibility.yml claim_eligibility_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-usd3-yoeth-exit-eligibility
+          path: claim_eligibility_evidence/
+          retention-days: 14
