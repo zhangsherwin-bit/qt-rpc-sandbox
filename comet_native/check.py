@@ -100,7 +100,7 @@ def run_case(r,h,prefix,receipts,code,fee,matched):
     exact=[1,int(h["number"],16),int(h["timestamp"],16),int(h["baseFeePerGas"],16)]
     if b[:4]!=exact or a[:4]!=exact:raise ValueError("Noncanonical execution environment")
     if any(b[i] for i in range(4,10)):raise ValueError("Probe or beneficiary initially funded")
-    if after[7:9]!=before[7:9]:raise ValueError("Unpriced token left with beneficiary")
+    if a[7:9]!=b[7:9]:raise ValueError("Unpriced token left with beneficiary")
     used=int(trade["gasUsed"],16)
     fee_wei=used*b[3]
     record={"label":label,"fee_tier":fee,"observed_bid_attempted":matched,

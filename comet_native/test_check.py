@@ -30,6 +30,11 @@ class TestNativeBid(unittest.TestCase):
   sol=(Path(__file__).parent/'CometNativeBidProbe.sol').read_text()
   for token in ("exactOutputSingle","IWETHD(WETH).withdraw(left)","block.coinbase","BENEF).call{value:beneficiaryWei}"):
    self.assertIn(token,sol)
+ def test_decoded_env_balance_comparison(self):
+  src=(Path(__file__).parent/'check.py').read_text()
+  self.assertIn('if a[7:9]!=b[7:9]:',src)
+  self.assertNotIn('if after[7:9]!=before[7:9]:',src)
+  a=list(range(11));b=a.copy();self.assertEqual(a[7:9],b[7:9]);b[7]+=1;self.assertNotEqual(a[7:9],b[7:9])
  def test_production_addresses_frozen(self):
   self.assertEqual(C.F.COMET.lower(),"0xc3d688b66703497daa19211eedff47f25384cdc3")
 if __name__=='__main__':unittest.main()
