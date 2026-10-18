@@ -1,0 +1,34 @@
+name: QT Stage1 public negative-risk event screening
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'neg_risk/**'
+      - '.github/workflows/stage1-neg-risk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-public-prediction-books
+  cancel-in-progress: false
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline cash-depth validation
+        run: python3 -m unittest discover -s neg_risk -p 'test_*.py' -v
+      - name: Study public event inventories and books only
+        run: python3 neg_risk/screen.py
+      - name: Archive event, orderbook, failure and source data
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-negative-risk-public-books
+          path: |
+            negative_risk_evidence/
+            neg_risk/
+          retention-days: 14
