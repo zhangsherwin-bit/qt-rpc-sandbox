@@ -107,8 +107,13 @@ def diagnostic_views(m,block):
   except Exception as e:x["error"]=repr(e)
   return x
  check("vault_underlying",v,sig("asset()"))
- check("vault_share_decimals",v,sig("decimals()"))
- check("vault_preview_redeem_one_nominal_share",v,sig("previewRedeem(uint256)")+w(10**(6 if m["name"].startswith("USD3") or "sUSDX" in m["name"] else 18)))
+ dec=check("vault_share_decimals",v,sig("decimals()"))
+ if "return" in dec:
+  try:
+   decimals=parse_uint(dec["return"])
+   if 0<decimals<=24:
+    check("vault_preview_redeem_one_nominal_share",v,sig("previewRedeem(uint256)")+w(10**decimals))
+  except Exception as e:r["share_decimal_error"]=repr(e)
  check("vault_total_assets",v,sig("totalAssets()"))
  check("loan_token_idle_balance_at_vault",loan,sig("balanceOf(address)")+a(v))
  check("vault_max_redeem_core",v,sig("maxRedeem(address)")+a(CORE))
