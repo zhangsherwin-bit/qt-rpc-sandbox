@@ -1,0 +1,33 @@
+name: QT Stage1 missing five Compound Ethereum markets
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'comet_missing/**'
+      - '.github/workflows/comet-missing-five.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  finish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline identity and read-only checks
+        run: |
+          python3 -m py_compile comet_missing/scan.py comet_current/screen.py stage1_followup/study.py
+          python3 -m unittest discover -s comet_missing -p 'test_*.py' -v
+      - name: Pin independent Ethereum block and finish missing inventory
+        run: python3 comet_missing/scan.py
+      - name: Preserve every observation, denial and exact source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-comet-five-remaining
+          path: |
+            comet_missing_evidence/
+            comet_missing/
+          retention-days: 14
