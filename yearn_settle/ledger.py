@@ -49,7 +49,7 @@ def ledger(c,row):
         receipt=c.rpc(1,"original_settled_transaction","eth_getTransactionReceipt",[row["settle_tx"]])
         if not receipt or receipt["status"]!="0x1" or int(receipt["blockNumber"],16)!=row["settle_block"]:
             raise ValueError("Canonical successful settlement receipt missing")
-        assert any(l["topics"][0].lower()==SETTLED and l["address"].lower()==row["auction"] for l in receipt["logs"])
+        assert any(l.get("topics") and l["topics"][0].lower()==SETTLED and l["address"].lower()==row["auction"] for l in receipt["logs"])
         receiver=S.address(c.call(1,row["auction"],"receiver()",[],row["settle_block"]))
         token=[transfer(l) for l in receipt["logs"] if l.get("topics") and l["address"].lower() in (FROM,WANT)
                and l["topics"][0].lower()==TRANSFER]
@@ -98,5 +98,5 @@ def main():
       "single_auction_receipts":sum(x.get("verified_receipt",False) for x in report["cases"]),
       "unambiguous_single_transfer":sum(x.get("cash_flow_ambiguous") is False for x in report["cases"]),
       "errors":report["errors"]},indent=2),flush=True)
-    if report["errors"]:raise SystemExit("Evidence incomplete, retained partial artifact")
+    if report["errors"] or not report["complete"]:raise SystemExit("Evidence incomplete, retained partial artifact")
 if __name__=="__main__":main()
