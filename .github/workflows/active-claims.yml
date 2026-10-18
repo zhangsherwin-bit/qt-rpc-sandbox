@@ -1,0 +1,37 @@
+name: QT Stage1 active-credit redeemable collateral claim census
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'active_claims/**'
+      - '.github/workflows/active-claims.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-active-morpho-claim-rpc
+  cancel-in-progress: false
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline selection and accounting tests
+        run: python3 -m unittest discover -s active_claims -p 'test_*.py' -v
+      - name: Read actual selected market collateral contract states
+        run: python3 active_claims/scan.py
+      - name: Preserve evidence including provider failures
+        if: always()
+        run: |
+          mkdir -p debt_claim_evidence/source
+          cp active_claims/*.py debt_claim_evidence/source/
+          cp .github/workflows/active-claims.yml debt_claim_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-active-collateral-claim-detection
+          path: debt_claim_evidence/
+          retention-days: 14
