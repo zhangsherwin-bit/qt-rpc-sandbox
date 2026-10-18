@@ -1,0 +1,37 @@
+name: QT Stage1 Morpho vault share collateral into USDC debt
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'vault_credit/**'
+      - '.github/workflows/vault-credit-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-morpho-readonly-api
+  cancel-in-progress: false
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline market selection controls
+        run: python3 -m unittest discover -s vault_credit -p 'test_*.py' -v
+      - name: Enumerate public USDC credit markets backed by actual vault shares
+        run: python3 vault_credit/scan.py
+      - name: Save failures, exact source and public API bodies
+        if: always()
+        run: |
+          mkdir -p vault_credit_evidence/source
+          cp vault_credit/*.py vault_credit_evidence/source/
+          cp .github/workflows/vault-credit-inventory.yml vault_credit_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-vault-collateral-credit
+          path: vault_collateral_evidence/
+          retention-days: 14
