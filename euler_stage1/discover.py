@@ -11,7 +11,7 @@ OUT=Path("euler_evidence");OUT.mkdir(exist_ok=True)
 RPC="https://rpc-eth.blockmachine.io"
 GQL="https://api.goldsky.com/api/public/project_cm4iagnemt1wp01xn4gh1agft/subgraphs/euler-simple-mainnet/latest/gn"
 BLOCKS=[(25950000,25957999),(26010000,26017999),(26080000,26087999)]
-MAX_REQUESTS=95
+MAX_REQUESTS=130
 MAX_SELECTED=6
 REQUESTS=0;HEAVY=0;DENIED=False;START=time.monotonic();LAST_LOG=-1e6
 def save(n,v):
@@ -85,7 +85,7 @@ def go():
  rep={"study":"Euler EVK historical liquidation cohort and same-asset collateral cash redemption diagnostics",
     "read_only":True,"no_fills_or_cash_profit_tested":True,"no_signing_or_broadcast":True,
     "windows":[{"lo":lo,"hi":hi} for lo,hi in BLOCKS],
-    "selection":"Deterministic first 35 sorted Euler simple-subgraph vault IDs, rank by positive present borrows among historically deployed; select max six vaults BEFORE historical events",
+    "selection":"Deterministic first 24 sorted Euler simple-subgraph vault IDs, rank by positive present borrows among historically deployed; select max six vaults BEFORE historical events",
     "selected":[],"events":[],"errors":[],"complete":False,
     "limitations":["Subgraph coverage/late vaults may omit past accounts; this is NOT a full Euler universe",
     "Ranking by current borrow volume may bias discovery; not a prospective holdout",
@@ -100,7 +100,7 @@ def go():
    h0=rpc("header_lo","eth_getBlockByNumber",[hex(lo),False])
    h1=rpc("header_hi","eth_getBlockByNumber",[hex(hi),False])
    if int(h1["timestamp"],16)<=int(h0["timestamp"],16):raise ValueError("Nonmonotonic headers")
-  query="{ vaults(first: 35, orderBy: id, orderDirection: asc) { id factory } }"
+  query="{ vaults(first: 24, orderBy: id, orderDirection: asc) { id factory } }"
   data=fetch("vault_list",GQL,{"query":query})
   vs=data.get("vaults",[])
   if len(vs)<6:raise ValueError("Subgraph did not return 6 vaults")
