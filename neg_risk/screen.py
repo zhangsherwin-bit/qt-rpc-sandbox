@@ -102,14 +102,14 @@ def calc(e,books):
 def main():
     report={"read_only":True,"no_order_placement_or_capital":True,
       "jurisdiction":"Public-data research only; US and UK cannot be presumed eligible",
-      "sampling":"First six eligible, non-augmented, complete-looking multioutcome events from first five active Gamma event pages; frozen BEFORE CLOB quotes",
+      "sampling":"First six eligible, non-augmented, complete-looking multioutcome events from first twenty small active Gamma event pages; frozen BEFORE CLOB quotes",
       "caveat":"API event grouping is not a proof that every possible outcome is registered, nor a historical book or executable payout.",
       "events":[],"errors":[],"completed":False}
     dump("REPORT.json",report)
     try:
         candidates=[]
-        for offset in range(0,500,100):
-            url="https://gamma-api.polymarket.com/events?active=true&closed=false&limit=100&offset="+str(offset)
+        for offset in range(0,300,15):
+            url="https://gamma-api.polymarket.com/events?active=true&closed=false&limit=15&offset="+str(offset)
             items=request("gamma_page_"+str(offset),url)
             if not isinstance(items,list):raise ValueError("Unexpected Gamma schema")
             candidates.extend(x for x in items if event_select(x))
