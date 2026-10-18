@@ -1,0 +1,37 @@
+name: QT Stage1 complete Comet absorption and cash path
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['comet_follow/**', '.github/workflows/comet-absorb-followthrough.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-comet-absorb-followthrough
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline guards and exact-source transformation
+        run: python3 -m unittest discover -s comet_follow -p 'test_*.py' -v
+      - name: Pinned read-only simulation dependencies
+        run: python3 -m pip install pycryptodome==3.23.0 py-solc-x==2.0.5
+      - name: Complete intended absorption and cash settlement at actual historical state
+        run: python3 comet_follow/run.py
+      - name: Preserve original and modified source plus partial outcomes
+        if: always()
+        run: |
+          mkdir -p follow_evidence/source
+          cp comet_follow/*.py follow_evidence/source/
+          cp comet_flash/replay.py follow_evidence/source/inherited_replay.py
+          cp .github/workflows/comet-absorb-followthrough.yml follow_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-comet-absorption-complete-cash
+          path: follow_evidence/
+          retention-days: 14
