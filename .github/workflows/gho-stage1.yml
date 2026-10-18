@@ -1,0 +1,35 @@
+name: QT Stage1 new Aave GHO GSM primary vs secondary market conversion
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'gho_stage1/**'
+      - '.github/workflows/gho-stage1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-gho-public-rpc
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline GSM ABI and cash constraints
+        run: python3 -m unittest discover -s gho_stage1 -p 'test_*.py' -v
+      - name: Real historical GSM capacity and finite-size DEX cash quotes
+        run: python3 gho_stage1/quote.py
+      - name: Upload failures and audited raw responses
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-gho-gsm-cash-quotes
+          path: |
+            gho_evidence/
+            gho_stage1/
+          retention-days: 14
