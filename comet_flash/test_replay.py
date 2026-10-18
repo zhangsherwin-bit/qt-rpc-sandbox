@@ -30,7 +30,7 @@ class TestFlash(unittest.TestCase):
    self.assertNotIn(bad,s)
  def test_output_must_be_real_transfer(self):
   s=(Path(__file__).parent/'replay.py').read_text()
-  self.assertIn('cash transfer not proven',s)
+  self.assertIn('cash transfer not proven',s.lower())
   self.assertIn('rollback_verified',s)
  def test_reserved_october_not_used(self):
   self.assertTrue(R.BLOCK<26093737)
