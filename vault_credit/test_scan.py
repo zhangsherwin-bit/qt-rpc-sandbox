@@ -15,7 +15,7 @@ class TestVaultCredit(unittest.TestCase):
  def test_market_id_is_not_profit(self):
   s=(Path(__file__).parent/'scan.py').read_text()
   self.assertIn('liquidation_or_cash_profit_proven',s)
-  self.assertIn('unavailable_not_absent',s)
+  self.assertIn('coverage_limited',s)
  def test_asset_selector(self):
   self.assertEqual(S.mintoken('8453:0xABCD'),'0xabcd')
  def test_read_only(self):
