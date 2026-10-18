@@ -29,6 +29,6 @@ jobs:
         with:
           name: qt-stage1-silo-liquidation-events
           path: |
-            silo_evidence/
+            silo_complete_evidence/
             silo_stage1/
           retention-days: 14
