@@ -68,6 +68,7 @@ def market(c,ch,label,addr,block):
           warning="No flash repayment, producer bid, gas or exact swap execution proved")
        except Exception as e:d["error"]=repr(e)
      except Exception as e:q["error"]=repr(e)
+   except Exception as e:a["errors"].append(repr(e))
   row["gross_positive_quote_cases"]=sum(bool(z.get("positive_gross")) for a in row["assets"] for q in a.get("gross_quote_candidates",[]) for z in q.get("dex",[]))
   row["complete"]=True
  except Exception as e:row["error"]=repr(e)
