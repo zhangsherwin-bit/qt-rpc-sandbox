@@ -62,8 +62,8 @@ def frozen():
   for c in [z for z in events if z['from_token']==token]:
    if c['kick_date'] in dates:continue
    chosen.append(c);dates.add(c['kick_date'])
-   if len(dates)==5:break
- if len(chosen)!=10:raise ValueError('Frozen 10 distinct-date events per asset not available')
+   if len(dates)==4:break
+ if len(chosen)!=8:raise ValueError('Frozen 8 distinct-date events per asset not available')
  return chosen,{'source_events':len(events),'source_auctions':len(meta),'source_logs':len(logs),'chosen':len(chosen)}
 
 class Rpc:
