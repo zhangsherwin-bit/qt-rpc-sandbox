@@ -1,0 +1,34 @@
+name: QT Stage1 eleven Comet markets real available-sale inventory
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'comet_current/**'
+      - '.github/workflows/comet-current-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-all-comet-live-views
+  cancel-in-progress: false
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline safety and ABI tests
+        run: python3 -m unittest discover -s comet_current -p 'test_*.py' -v
+      - name: Read exactly pinned collateral inventory with real finite DEX quotes
+        run: python3 comet_current/screen.py
+      - name: Archive positive and negative market states and raw HTTP bodies
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-eleven-comet-current-inventories
+          path: |
+            live_inventory_evidence/
+            comet_current/
+          retention-days: 14
