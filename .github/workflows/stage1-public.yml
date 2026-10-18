@@ -1,0 +1,37 @@
+name: QT Stage 1 broader public-market screen
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['stage1/**', '.github/workflows/stage1-public.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-public-stage1-market-data
+  cancel-in-progress: false
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned quotation encoding utilities
+        run: python3 -m pip install eth-abi==5.2.0 pycryptodome==3.23.0
+      - name: Offline accounting and read-only scope tests
+        run: python3 -m unittest discover -s stage1 -p 'test_*.py' -v
+      - name: Public data only, no trading or simulated executor
+        run: python3 stage1/public_screen.py
+      - name: Preserve exact source and outcomes including failures
+        if: always()
+        run: |
+          mkdir -p stage1_evidence/source
+          cp stage1/*.py stage1/PLAN.json stage1_evidence/source/
+          cp .github/workflows/stage1-public.yml stage1_evidence/source/
+          if test -f stage1_evidence/SUMMARY.json; then cat stage1_evidence/SUMMARY.json; fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-public-breadth
+          path: stage1_evidence/
+          retention-days: 14
