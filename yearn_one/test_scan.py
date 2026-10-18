@@ -20,5 +20,5 @@ class TestYearn(unittest.TestCase):
  def test_explicit_no_cash_claim(self):
   s=(Path(__file__).parent/"scan.py").read_text()
   self.assertIn('"full_execution":False',s)
-  self.assertIn('"not_executable_or_captured_proof"',s)
+  self.assertIn('not_executable_or_captured_proof=True',s)
 if __name__=="__main__":unittest.main()
