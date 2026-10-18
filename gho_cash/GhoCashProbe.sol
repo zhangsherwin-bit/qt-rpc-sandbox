@@ -25,10 +25,10 @@ interface ISwapRouter {
 contract GhoCashProbe {
     address public constant MORPHO=0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb;
     address public constant USDC=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address public constant GHO=0x40D16FC0246aD3160Ccc09B8D0D3a2cD28aE6C2f;
+    address public constant GHO=0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f;
     address public constant GSM=0x3A3868898305f04beC7FEa77BecFf04C13444112;
     address public constant ROUTER=0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address public constant BENEFICIARY=0x000000000000000000000000000000000000bAbE;
+    address public constant BENEFICIARY=0x000000000000000000000000000000000000baBe;
     function env() external view returns(uint256,uint256,uint256,uint256,
         uint256,uint256,uint256,uint256,uint256,uint256) {
         return (block.chainid,block.number,block.timestamp,block.basefee,
