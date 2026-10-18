@@ -1,0 +1,38 @@
+name: QT Stage1 Compound Comet 11-market cash inventory
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'comet_new/**'
+      - '.github/workflows/stage1-comet-breadth.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-comet-public-reads
+  cancel-in-progress: false
+jobs:
+  cash-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline Compound event ABI and safe-accounting controls
+        run: python3 -m unittest discover -s comet_new -p 'test_*.py' -v
+      - name: Real protocol absorption-sale events and finite DEX exits
+        run: python3 comet_new/scan.py
+      - name: Preserve complete source, failures and request receipts
+        if: always()
+        run: |
+          mkdir -p comet_evidence/source
+          cp comet_new/*.py comet_evidence/source/
+          cp stage1_followup/study.py stage1_followup/keccak_view.py comet_evidence/source/
+          cp .github/workflows/stage1-comet-breadth.yml comet_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-comet-11market-sale-census
+          path: comet_evidence/
+          retention-days: 14
