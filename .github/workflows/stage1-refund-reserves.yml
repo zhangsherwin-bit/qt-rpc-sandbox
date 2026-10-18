@@ -1,0 +1,42 @@
+name: QT Stage1 repayment provenance and reserve inventory
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['stage1_followup/**', '.github/workflows/stage1-refund-reserves.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-stage1-refund-reserve-readonly
+  cancel-in-progress: false
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-stage1-empirical-api
+          path: input_api
+          run-id: 39102389625
+          github-token: ${{ github.token }}
+      - name: Offline parser and cash-ownership controls
+        run: python3 -m unittest discover -s stage1_followup -p 'test_*.py' -v
+      - name: Bounded fresh public evidence (no transaction execution)
+        run: python3 stage1_followup/study.py --input input_api --output evidence
+      - name: Preserve exact tested source
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp stage1_followup/*.py evidence/source/
+          cp .github/workflows/stage1-refund-reserves.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-refund-reserves
+          path: evidence/
+          retention-days: 14
