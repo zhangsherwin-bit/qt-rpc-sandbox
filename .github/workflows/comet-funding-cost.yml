@@ -1,4 +1,4 @@
-name: QT Comet same-state producer compensation funding
+name: QT Comet saved same-state funding evidence repair
 'on':
   pull_request:
     types: [opened, synchronize, reopened]
@@ -20,19 +20,25 @@ jobs:
           path: input_cash
           run-id: 39117372686
           github-token: ${{ github.token }}
-      - name: Offline inherited-state and quote checks
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-comet-producer-funding-cost
+          path: input_failed
+          run-id: 39118164784
+          github-token: ${{ github.token }}
+      - name: Exact cash and synthetic-log-metadata regression tests
         run: python3 -m unittest discover -s comet_funding -p 'test_*.py' -v
-      - name: Same-state producer funding quote
-        run: python3 comet_funding/check.py
-      - name: Keep raw request, response and source
+      - name: Reanalyse saved response without any new RPC requests
+        run: python3 comet_funding/decode_saved.py
+      - name: Retain exact interpretation and source
         if: always()
         run: |
-          mkdir -p funding_evidence/source
-          cp comet_funding/*.py funding_evidence/source/
-          cp .github/workflows/comet-funding-cost.yml funding_evidence/source/
+          mkdir -p funding_decode_evidence/source
+          cp comet_funding/*.py funding_decode_evidence/source/
+          cp .github/workflows/comet-funding-cost.yml funding_decode_evidence/source/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: qt-comet-producer-funding-cost
-          path: funding_evidence/
+          name: qt-comet-producer-funding-decoded
+          path: funding_decode_evidence/
           retention-days: 14
