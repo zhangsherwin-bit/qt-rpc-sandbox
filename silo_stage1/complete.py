@@ -43,15 +43,27 @@ def main():
    report["sources"][field]=record
    try:
     data=page(field,item)
-    record.update(status="OK",count=len(data["items"]),selected_scalar_fields=data["selected_scalar_fields"],items=data["items"])
-   except Exception as e:record.update(status="ERROR",error=repr(e))
+    record.update(status="OK",count=len(data["items"]),selected_scalar_fields=data["selected_scalar_fields"],items=data["items"],pagination_complete=len(data["items"])<100)
+   except Exception as e:
+    record.update(status="ERROR",error=repr(e))
+    # Try only the reward endpoint with a smaller unsorted request: a provider's
+    # backend failure is not a zero-reward observation.
+    if field=="liquidationRewards":
+     try:
+      selected,_=select_fields(item)
+      data=S.gql("reward_smaller_fallback","query { liquidationRewards(limit:10) {items {"+' '.join(selected)+"}}}")
+      items=(data.get("liquidationRewards") or {}).get("items")
+      if not isinstance(items,list):raise ValueError("Unexpected fallback shape")
+      record.update(status="OK_PARTIAL",count=len(items),items=items,selected_scalar_fields=selected,
+        pagination_complete=False,fallback_query=True,error=None)
+     except Exception as ex2:record["fallback_error"]=repr(ex2)
    S.save("REPORT.json",report)
   # Attempt canonical receipts of first, median and last event for each supported EVM chain.
   # No per-deposit profit is inferred from multi-action receipts.
   samples=[]
   seen=set()
   for src in report["sources"].values():
-   if src.get("status")!="OK":continue
+   if src.get("status") not in ("OK","OK_PARTIAL"):continue
    arr=src["items"]
    for i in sorted({0,len(arr)//2,len(arr)-1}) if arr else []:
     v=arr[i]; tx=v.get("txHash") or v.get("hash")
@@ -71,7 +83,7 @@ def main():
     except Exception as e:row.update(status="UNAVAILABLE",error=repr(e))
     S.save("REPORT.json",report)
   report["receipt_controls"]=samples
-  report["finished"]=all(x.get("status")=="OK" for x in report["sources"].values())
+  report["finished"]=all(x.get("status") in ("OK","OK_PARTIAL") for x in report["sources"].values())
  except Exception as e:report["errors"].append(repr(e));report["traceback"]=traceback.format_exc()
  report["requests"]=S.n;report["denied"]=sorted(S.denied)
  S.save("REPORT.json",report)
