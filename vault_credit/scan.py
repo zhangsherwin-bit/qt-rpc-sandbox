@@ -62,28 +62,46 @@ def mintoken(x):
     return v
 def matches_vault_market(m,chain,vault):
     return mintoken(m.get("collateral_token"))==vault.lower() and mintoken(m.get("loan_token"))==USDC[chain]
-def read_market(chain,vault,report):
-    qs=urllib.parse.urlencode({"chain_id":chain,"collateral_token":str(chain)+":"+vault["address"],"limit":100})
-    endpoint="https://api.morpho.org/v1/blue/markets?"+qs
-    page=fetch("collateral_market_"+vault["address"],endpoint)
-    lst=page.get("data")
-    if not isinstance(lst,list):raise ValueError("Expected REST data list")
-    matched=[x for x in lst if matches_vault_market(x,chain,vault["address"])]
-    res={"source_vault":vault,"returned_market_count":len(lst),"cursor_remaining":bool(page.get("cursor")),"markets":[]}
-    for m in matched:
-        mid=str(m.get("market_id","")).lower()
-        if not re.fullmatch(r"0x[0-9a-f]{64}",mid):continue
-        line={"market_id":mid,"lltv_wad":str(m.get("lltv_wad")),"oracle_address":m.get("oracle_address"),
-              "creation_block":m.get("creation_block_number"),"source_rest_full_market":m}
-        res["markets"].append(line)
-        try:
-            j=fetch("market_state_"+mid,"https://api.morpho.org/v0/blue/markets/"+str(chain)+":"+mid+"/state")
-            st=j.get("data",j)
-            line["state"]=st
-            line["debt_units_unknown_if_absent"]=True
-        except Exception as e:line["state_error"]=repr(e)
-        if BLOCKED:break
-    return res
+def read_markets_for_selected(chain,selected,report):
+    """Documented cursor-paginated market enumeration; never classify API 400 as zero markets."""
+    by_collateral={x["address"]:{"source_vault":x,"returned_market_count":None,"markets":[]} for x in selected}
+    seen=set();cursor=None;scope={"pages":[],"complete_directory":False,"cursor_remaining":False,"scope":"first 4 pages of official unfiltered market directory"}
+    for ix in range(4):
+        args={"chain_id":chain,"limit":1000}
+        if cursor:args["cursor"]=cursor
+        url="https://api.morpho.org/v1/blue/markets?"+urllib.parse.urlencode(args)
+        j=fetch("market_directory_"+str(chain)+"_"+str(ix),url)
+        rows=j.get("data")
+        if not isinstance(rows,list):raise ValueError("Official market directory did not return data list")
+        scope["pages"].append({"page":ix,"n":len(rows)})
+        for m in rows:
+            collateral=mintoken(m.get("collateral_token"))
+            if collateral not in by_collateral or not matches_vault_market(m,chain,collateral):continue
+            mid=str(m.get("market_id","")).lower()
+            if not re.fullmatch("0x[0-9a-f]{64}",mid) or mid in seen:continue
+            seen.add(mid)
+            line={"market_id":mid,"lltv_wad":str(m.get("lltv_wad")),
+                  "oracle_address":m.get("oracle_address"),"creation_block":m.get("creation_block_number"),
+                  "source_rest_full_market":m}
+            by_collateral[collateral]["markets"].append(line)
+        cursor=j.get("cursor")
+        if not cursor:
+            scope["complete_directory"]=True;break
+        if BLOCKED:raise RuntimeError("Provider access denied")
+    scope["cursor_remaining"]=bool(cursor)
+    scope["matched_market_count"]=len(seen)
+    for rec in by_collateral.values():
+        rec["returned_market_count"]=sum(x["n"] for x in scope["pages"])
+        rec["coverage_limited"]=not scope["complete_directory"]
+        for line in rec["markets"]:
+            try:
+                mid=line["market_id"]
+                state=fetch("market_state_"+mid,"https://api.morpho.org/v0/blue/markets/"+str(chain)+":"+mid+"/state")
+                line["state"]=state.get("data",state)
+            except Exception as exc:line["state_error"]=repr(exc)
+        save("REPORT.json",report)
+    return list(by_collateral.values()),scope
+
 def positions_probe(chain,selected_markets):
     market_ids=[m["market_id"] for m in selected_markets][:8]
     if not market_ids:return dict(markets_requested=[],note="no USDC-borrow market with selected share collateral")
@@ -123,15 +141,12 @@ def main():
             cr=dict(api_vaults_returned=len(items),selected=len(v),market_count=0,markets_with_debt_unknown=[])
             rep["chains"][str(ch)]=cr
             save("REPORT.json",rep)
-            for i,one in enumerate(v):
-                try:
-                    row=read_market(ch,one,rep)
-                    rep["vault_market_rows"].append(row)
-                    cr["market_count"]+=len(row["markets"])
-                except Exception as e:
-                    rep["vault_market_rows"].append({"source_vault":one,"error":repr(e),"unavailable_not_absent":True})
-                save("REPORT.json",rep)
-                if BLOCKED:raise RuntimeError("Provider access/rate denied")
+            rows,scope=read_markets_for_selected(ch,v,rep)
+            rep["vault_market_rows"].extend(rows)
+            cr["market_count"]=sum(len(x["markets"]) for x in rows)
+            cr["directory_scope"]=scope
+            save("REPORT.json",rep)
+            if BLOCKED:raise RuntimeError("Provider access/rate denied")
             candidates=[m for row in rep["vault_market_rows"] if row.get("source_vault",{}).get("chain")==ch for m in row.get("markets",[])]
             cr["position_probe"]=positions_probe(ch,candidates)
             save("REPORT.json",rep)
