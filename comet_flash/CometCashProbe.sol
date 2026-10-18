@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
  * Exact observed Compound III USDC/WETH collateral purchase.
  * Research-only code deployed solely by eth_simulateV1 code override at an
  * unused address. No production contract or storage is modified.
- * Aave V3 flashLoanSimple -> Comet.buyCollateral -> Uniswap V3 exactInputSingle
+ * Aave V3 flashLoanSimple -> Comet.absorb -> Comet.buyCollateral -> Uniswap V3 exactInputSingle
  * -> repay Aave -> transfer all excess USDC to frozen research beneficiary.
  */
 interface IERC20 {
@@ -15,6 +15,7 @@ interface IAavePool {
     function flashLoanSimple(address receiver,address asset,uint256 amount,bytes calldata params,uint16 referralCode) external;
 }
 interface IComet {
+    function absorb(address absorber,address[] calldata accounts) external;
     function buyCollateral(address asset,uint256 minAmount,uint256 baseAmount,address recipient) external;
 }
 interface ISwapRouter {
@@ -37,6 +38,7 @@ contract CometCashProbe {
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address internal constant BENEF = address(uint160(0xdead8821));
+    address internal constant FROZEN_BORROWER = 0xc3A6203A618438E206C9d1dA2aC0dBA6F36fcfFd;
     uint256 private constant MIN_LOAN = 1_000_000; // minimum 1 USDC
     event CollateralAndSwap(uint256 loan,uint256 premium,uint256 collateralIn,uint256 usdcAfterSwap);
     event PaidInUSDC(uint256 amount);
@@ -81,6 +83,9 @@ contract CometCashProbe {
         (uint24 fee,uint256 minProfit)=abi.decode(params,(uint24,uint256));
         require(amount>=MIN_LOAN,"bad loan amount");
         require(IERC20(USDC).balanceOf(address(this))==amount,"unexpected callback cash");
+        address[] memory accounts = new address[](1);
+        accounts[0] = FROZEN_BORROWER;
+        IComet(COMET).absorb(address(this),accounts);
         _approve(USDC,COMET,amount);
         IComet(COMET).buyCollateral(WETH,0,amount,address(this));
         uint256 seized=IERC20(WETH).balanceOf(address(this));
