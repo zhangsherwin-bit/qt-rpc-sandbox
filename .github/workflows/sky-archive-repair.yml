@@ -1,0 +1,35 @@
+name: QT Stage1 Sky historical caller reward repair
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'sky_repair/**'
+      - '.github/workflows/sky-archive-repair.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-sky-provider-census
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 48
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline controls
+        run: python3 -m unittest discover -s sky_repair -p 'test_*.py' -v
+      - name: Recover verified registry and scan historical events
+        run: python3 sky_repair/scan.py
+      - name: Preserve all success, error and raw evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-sky-repaired-stage1-census
+          path: |
+            sky_evidence/
+            sky_repair/
+          retention-days: 14
