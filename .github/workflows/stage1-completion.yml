@@ -1,0 +1,51 @@
+name: QT Stage 1 evidence completion
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['finish_stage1/**', '.github/workflows/stage1-completion.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-public-ethereum-stage1-research
+  cancel-in-progress: false
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Interface and scope regression tests
+        run: python3 -m unittest discover -s finish_stage1 -p 'test_*.py' -v
+      - name: Prove whether API-open orders were already filled
+        run: |
+          mkdir -p order_work
+          cd order_work
+          python3 ../finish_stage1/finish.py orders
+      - name: Preserve canonical order results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-orders-canonical
+          path: order_work/evidence/
+          retention-days: 14
+      - name: Complete same frozen chain window with verified registry
+        if: always()
+        run: |
+          mkdir -p complete_work
+          cd complete_work
+          python3 ../finish_stage1/finish.py chain
+      - name: Save exact source and partial observations
+        if: always()
+        run: |
+          mkdir -p complete_work/evidence/source
+          cp broad_stage1/*.py finish_stage1/*.py .github/workflows/stage1-completion.yml complete_work/evidence/source/
+      - name: Preserve historical evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-completed-chain
+          path: complete_work/evidence/
+          retention-days: 14
