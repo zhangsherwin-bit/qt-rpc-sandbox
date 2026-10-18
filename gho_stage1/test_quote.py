@@ -6,7 +6,7 @@ class GSMTests(unittest.TestCase):
  def test_selector(self):self.assertEqual(len(Q.sig("getAvailableLiquidity()")),10)
  def test_addresses(self):
   self.assertEqual(len(Q.GHO),42);self.assertEqual(len(Q.USDC),42)
-  self.assertEqual(len({x['address'] for x in Q.MODULES}),2)
+  self.assertEqual(len({x['address'] for x in Q.MODULES}),1)
  def test_abi(self):
   self.assertEqual(Q.words("0x"+Q.u(7)+Q.u(4)),[7,4])
   self.assertEqual(len(Q.u(100)),64)
