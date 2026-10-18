@@ -39,7 +39,7 @@ contract CometNativeBidProbe {
   address constant WETH=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
   address constant ROUTER=0xE592427A0AEce92De3Edee1F18E0157C05861564;
   address constant BENEF=address(uint160(0xdead8821));
-  address constant BORROWER=0xc3A6203A618438E206C9D1DA2AC0dba6f36FCFFD;
+  address constant BORROWER=address(uint160(0x00c3a6203a618438e206c9d1da2ac0dba6f36fcffd));
   uint256 constant OBSERVED_DIRECT_BID=174449845338543024;
   uint256 constant MAX_LOAN=10000000000;
   uint256 private outstanding;
