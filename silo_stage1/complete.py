@@ -35,7 +35,7 @@ def main():
            "Latest-100 indexed events are a capped retrospective sample, not a complete frequency census",
            "All uncertain collateral ownership, debt repayment, and token rights remain unresolved",
            "No trade, signature, broadcast, keys or simulated state mutation"]}
- S.dump("REPORT.json",report)
+ S.save("REPORT.json",report)
  try:
   assert S.gql("check_live_api","query { __typename }")["__typename"]=="Query"
   for field,item in TYPES:
@@ -45,7 +45,7 @@ def main():
     data=page(field,item)
     record.update(status="OK",count=len(data["items"]),selected_scalar_fields=data["selected_scalar_fields"],items=data["items"])
    except Exception as e:record.update(status="ERROR",error=repr(e))
-   S.dump("REPORT.json",report)
+   S.save("REPORT.json",report)
   # Attempt canonical receipts of first, median and last event for each supported EVM chain.
   # No per-deposit profit is inferred from multi-action receipts.
   samples=[]
@@ -69,12 +69,12 @@ def main():
          gas_used=int(rec["gasUsed"],16),effective_gas_price_wei=int(rec["effectiveGasPrice"],16),
          log_count=len(rec["logs"]),fee_chain_native_wei=int(rec["gasUsed"],16)*int(rec["effectiveGasPrice"],16))
     except Exception as e:row.update(status="UNAVAILABLE",error=repr(e))
-    S.dump("REPORT.json",report)
+    S.save("REPORT.json",report)
   report["receipt_controls"]=samples
   report["finished"]=all(x.get("status")=="OK" for x in report["sources"].values())
  except Exception as e:report["errors"].append(repr(e));report["traceback"]=traceback.format_exc()
  report["requests"]=S.n;report["denied"]=sorted(S.denied)
- S.dump("REPORT.json",report)
+ S.save("REPORT.json",report)
  print(json.dumps({"finished":report["finished"],"requests":S.n,"sources":{k:{"status":v["status"],"n":v.get("count"),"error":v.get("error")} for k,v in report["sources"].items()},
  "receipt_samples":len(report.get("receipt_controls",[])),"errors":report["errors"]},indent=2),flush=True)
  if not report["finished"]:raise SystemExit("Research incomplete; retain partial actual event data")
