@@ -1,4 +1,4 @@
-name: QT Stage1 new Aave GHO GSM primary vs secondary market conversion
+name: QT Stage1 Arbitrum GHO GSM primary vs DEX cash quotes
 'on':
   pull_request:
     types: [opened, synchronize, reopened]
@@ -28,7 +28,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: qt-stage1-gho-gsm-cash-quotes
+          name: qt-stage1-gho-arbitrum-cash-quotes
           path: |
             gho_evidence/
             gho_stage1/
