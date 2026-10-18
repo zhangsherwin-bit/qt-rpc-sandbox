@@ -22,7 +22,7 @@ jobs:
       - name: Offline syntax and native payment protections
         run: |
           python3 -m py_compile comet_native/check.py comet_native/test_check.py comet_follow/run.py comet_flash/replay.py
-          python3 -m pip install pycryptodome==3.23.0
+          python3 -m pip install pycryptodome==3.23.0 py-solc-x==2.0.5
           python3 -m unittest discover -s comet_native -p 'test_*.py' -v
       - name: Install fixed Solidity compiler wrapper
         run: python3 -m pip install py-solc-x==2.0.5
