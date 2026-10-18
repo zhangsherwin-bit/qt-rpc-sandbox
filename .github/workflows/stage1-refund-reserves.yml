@@ -1,0 +1,74 @@
+name: QT Stage1 repayment provenance and reserve inventory
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['stage1_followup/**', '.github/workflows/stage1-refund-reserves.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-stage1-refund-reserve-readonly
+  cancel-in-progress: false
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 27
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-stage1-empirical-api
+          path: input_api
+          run-id: 39102389625
+          github-token: ${{ github.token }}
+      - name: Exact parser repair and recorded receipt controls
+        shell: python
+        run: |
+          import json,hashlib,sys
+          from pathlib import Path
+          p=Path('stage1_followup/study.py'); original=p.read_text(); s=original
+          edits=[
+            ("    if log['topics'][0].lower()!=FILL: return None", "    if not log.get('topics') or log['topics'][0].lower()!=FILL: return None"),
+            ("    t=log['topics'];signature=t[0].lower()", "    t=log.get('topics',[])\n    if not t: return None\n    signature=t[0].lower()"),
+            ("        if log['topics'][0].lower()==TRANSFER and len(log['topics'])==3:", "        if log.get('topics') and log['topics'][0].lower()==TRANSFER and len(log['topics'])==3:"),
+            ("        if key in self.cache:return self.cache[key]", "        if key in self.cache and not name.startswith('recheck'):return self.cache[key]"),
+            ("            fs=[decode_fill(l) for l in receipt['logs'] if l['topics'][0].lower()==FILL]", "            fs=[decode_fill(l) for l in receipt['logs'] if l.get('topics') and l['topics'][0].lower()==FILL]")
+          ]
+          for old,new in edits:
+              if s.count(old)!=1: raise SystemExit('Source mismatch; no fuzzy repair')
+              s=s.replace(old,new)
+          compile(s,str(p),'exec')
+          p.with_name('study_before_parser_fix.py').write_text(original); p.write_text(s)
+          p.with_name('PARSER_FIX.json').write_text(json.dumps({'before_sha256':hashlib.sha256(original.encode()).hexdigest(),'after_sha256':hashlib.sha256(s.encode()).hexdigest(),'edits':len(edits)},indent=2))
+          sys.path.insert(0,str(p.parent.resolve()))
+          import study
+          assert study.decode_fill({'topics':[]}) is None
+          assert study.decode_refund({'topics':[]}) is None
+          count=0
+          for f in sorted(Path('input_api/across').glob('*_fill_receipt.json')):
+              r=json.loads(f.read_text()); r=r.get('result',r)
+              decoded=[x for log in r['logs'] if (x:=study.decode_fill(log))]
+              assert decoded, f'No fill in frozen receipt {f}'
+              count+=1
+          assert count==6
+          print('Six frozen receipt decodes and both anonymous-log controls passed.')
+      - name: Offline parser and cash-ownership controls
+        run: python3 -m unittest discover -s stage1_followup -p 'test_*.py' -v
+      - name: Bounded fresh public evidence (no transaction execution)
+        run: python3 stage1_followup/study.py --input input_api --output evidence
+      - name: Preserve exact tested source
+        if: always()
+        run: |
+          mkdir -p evidence/source
+          cp stage1_followup/*.py evidence/source/
+          cp stage1_followup/PARSER_FIX.json evidence/source/ || true
+          cp .github/workflows/stage1-refund-reserves.yml evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-refund-reserves
+          path: evidence/
+          retention-days: 14
