@@ -1,0 +1,44 @@
+name: QT Stage1 Yearn actual auction settlement ledger
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'yearn_settle/**'
+      - '.github/workflows/stage1-yearn-settlement-ledger.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-stage1-yearn-receipt-investigation
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-four-angle-census
+          path: input_yearn
+          run-id: 39016955510
+          github-token: ${{ github.token }}
+      - name: Offline exact event-pair and cash accounting tests
+        run: python3 -m unittest discover -s yearn_settle -p 'test_*.py' -v
+      - name: Collect 12 canonical receipt-level token transfer cash ledgers
+        run: python3 yearn_settle/ledger.py
+      - name: Retain partial evidence and exact code
+        if: always()
+        run: |
+          mkdir -p settle_evidence/source
+          cp yearn_settle/*.py settle_evidence/source/
+          cp .github/workflows/stage1-yearn-settlement-ledger.yml settle_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-yearn-12-real-settlements
+          path: settle_evidence/
+          retention-days: 14
