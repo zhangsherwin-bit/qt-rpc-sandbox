@@ -1,0 +1,32 @@
+name: QT Stage1 real UniswapX order historical acquisition quotes
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'uniswapx_quote/**'
+      - '.github/workflows/stage1-uniswapx-orders.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline ABI checks
+        run: python3 -m unittest discover -s uniswapx_quote -p 'test_*.py' -v
+      - name: Quote only two historical confirmed fills at canonical states
+        run: python3 uniswapx_quote/quote.py
+      - name: Archive read-only quote evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-two-real-uniswapx-orders
+          path: |
+            uniswapx_evidence/
+            uniswapx_quote/
+          retention-days: 14
