@@ -10,8 +10,8 @@ USDC="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
 GHO="0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
 QUOTER="0x61ffe014ba17989e743c5f6cb21bf9697530b21e"
 MODULES=[
- {"name":"new_USDC","address":"0xfeeb6fe430b7523fef2a38327241ee7153779535"},
- {"name":"legacy_USDC","address":"0x0d8effc11df3f229aa1ea0509bc9dfa632a13578"}]
+ {"name":"current_aave_address_book_USDC","address":"0x3a3868898305f04bec7fea77becff04c13444112"},
+ {"name":"prior_seized_control_USDC","address":"0xfeeb6fe430b7523fef2a38327241ee7153779535"}]
 BLOCKS=[26090422,26220131]
 AMOUNTS=[100,1000,10000,100000]
 FEES=[100,500,3000]
@@ -64,7 +64,7 @@ def quote_exact_input(amount_gho,fee,block,basefee):
  return words(r)[0]
 def main():
  rep={"research_only":True,"full_atomic_cash_execution":False,
-      "scope":"Two known mainnet GHO GSM addresses, two fixed historical states, bidirectional cash quotes",
+      "scope":"Current and explicitly retired Aave mainnet GHO GSM USDC addresses, two fixed historical states, bidirectional cash quotes",
       "uncertainties":["A former GSM can be seized or superseded; deployed code and live gating checked separately",
        "Two quoted legs start from one canonical block but do not run sequentially",
        "No builder bid, failed-attempt costs, upfront gas, or executed reward included",
