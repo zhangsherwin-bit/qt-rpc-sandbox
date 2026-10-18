@@ -1,0 +1,39 @@
+name: QT Stage 1 native-conversion bridge quotations
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['native_extension/**', '.github/workflows/stage1-native-bridges.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-public-stage1-market-data
+  cancel-in-progress: false
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned encoding utilities
+        run: python3 -m pip install eth-abi==5.2.0 pycryptodome==3.23.0
+      - name: Inherited scope/accounting tests and source syntax check
+        run: |
+          python3 -m unittest discover -s stage1 -p 'test_*.py' -v
+          python3 -m py_compile native_extension/run.py
+      - name: Read fixed historical bridge prices
+        run: python3 native_extension/run.py
+      - name: Preserve exact code and failures
+        if: always()
+        run: |
+          mkdir -p native_evidence/source
+          cp native_extension/*.py native_extension/PLAN.json native_evidence/source/
+          cp stage1/public_screen.py native_evidence/source/
+          cp .github/workflows/stage1-native-bridges.yml native_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-native-bridges
+          path: native_evidence/
+          retention-days: 14

@@ -1,0 +1,15 @@
+{
+ "scope": "Public quote follow-through of DAI/USDS converter parity; not cash executions",
+ "reason": "Initial fee-100/500 DAI-USDS pools absent. Do not mistake missing direct venue for rejection of all conversion opportunities.",
+ "calendar_blocks": [25946848,26018583,26090155],
+ "calendar_dates": ["2026-09-10T12:00:00+00:00","2026-09-20T12:00:00+00:00","2026-09-30T12:00:00+00:00"],
+ "routes": ["USDC->DAI->native 1:1 USDS->USDC", "USDC->USDS->native 1:1 DAI->USDC", "DAI-USDS direct fee-3000 discovery comparator"],
+ "USDC_sizes": [100,1000,10000],
+ "fee_tiers": [100,500,3000],
+ "selection": "All requested deployed fee pairs; same pinned state for each independently quoted leg. Evaluate each available first-leg fee and each second-leg fee. No selecting dates by quotes. Quoter gas is not full execution gas.",
+ "limits": {"requests":300,"seconds":1100,"pause_seconds":2},
+ "no_state_overrides_executor_signatures_keys_or_transactions": true,
+ "positive_quote_is_not_verified_cash": true,
+ "initial_run_retained":39098289712,
+ "deployment_discovery_after_prior_results_is_development_not_independent_validation":true
+}
