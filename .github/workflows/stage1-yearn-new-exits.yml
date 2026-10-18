@@ -1,0 +1,43 @@
+name: QT Stage1 Yearn new cash inventories RSUP DOLA
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'yearn_new_exit/**'
+      - '.github/workflows/stage1-yearn-new-exits.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-public-ethereum-yearn-new-exits
+  cancel-in-progress: false
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-four-angle-census
+          path: input/
+          run-id: 39016955510
+          github-token: ${{ github.token }}
+      - name: Install pinned Keccak implementation
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline fixed selection and ABI tests
+        run: python3 -m unittest discover -s yearn_new_exit -p 'test_*.py' -v
+      - name: Compare actual historical auction settlements with finite-size DEX exits
+        run: python3 yearn_new_exit/screen.py
+      - name: Upload genuine transfers, cash quotes and incomplete evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-yearn-rsup-dola-cash-quotes
+          path: |
+            yearn_exit_evidence/
+            yearn_new_exit/
+          retention-days: 14
