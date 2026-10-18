@@ -8,6 +8,9 @@ class CurveExitTests(unittest.TestCase):
   self.assertTrue(r["complete"])
   self.assertEqual(len(r['cases']),6)
   self.assertTrue(all(x.get('receipt_checked') for x in r['cases']))
+ def test_uniswap_v2_factory_full_address(self):
+  self.assertEqual(len(A.V2FACTORY),42)
+  self.assertEqual(A.V2FACTORY.lower(),'0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f')
  def test_contract_code_only(self):
   self.assertTrue(A.POOL_USDC_CRVUSD.startswith('0x'))
   self.assertTrue(A.REG.startswith('0x'))
