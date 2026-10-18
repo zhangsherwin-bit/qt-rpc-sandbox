@@ -156,7 +156,7 @@ def scan_vault(chain,v,block):
     except Exception as e:record["state"]="UNAVAILABLE";record["error"]=repr(e)
     return record
 def main():
-    report={"research":"Stage1 vault-share claim conversion discovery",
+    report={"research":"Stage1 Base-only vault-share conversion after separate Ethereum RPC 429",
       "no_signed_or_sent_trades":True,"quote_is_not_profit":True,
       "conditions":["Actual Uniswap pool inventory, exact same-state swap, ERC4626 redeem, no transfer gates, gas and winning inclusion price required before declaring profit",
         "Uniswap Quoter exact-input partial consumption near price limits may not be identifiable",
@@ -166,7 +166,7 @@ def main():
       "selected":[],"chains":{},"results":[],"errors":[],"finished":False}
     save("REPORT.json",report)
     try:
-        for chain in (1,8453):
+        for chain in (8453,):
             if int(rpc(chain,"network_identity","eth_chainId",[]),16)!=chain:raise ValueError("wrong chain")
             header=rpc(chain,"pin_header","eth_getBlockByNumber",["latest",False])
             report["chains"][str(chain)]={"block":int(header["number"],16),"hash":header["hash"],"timestamp":int(header["timestamp"],16)}
