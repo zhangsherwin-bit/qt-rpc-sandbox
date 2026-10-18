@@ -4,7 +4,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 import alt as A
 class CurveExitTests(unittest.TestCase):
  def test_frozen_six_parent_receipts(self):
-  r=json.loads(Path('input_quotes/REPORT.json').read_text())
+  r=json.loads(Path('input_quotes/yearn_exit_evidence/REPORT.json').read_text())
   self.assertTrue(r["complete"])
   self.assertEqual(len(r['cases']),6)
   self.assertTrue(all(x.get('receipt_checked') for x in r['cases']))
