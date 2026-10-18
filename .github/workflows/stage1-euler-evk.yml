@@ -1,0 +1,36 @@
+name: QT Stage1 Euler EVK historical liquidation cash-source discovery
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'euler_stage1/**'
+      - '.github/workflows/stage1-euler-evk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-euler-ethereum-data
+  cancel-in-progress: false
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned Keccak helper
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline event, scope and safety checks
+        run: python3 -m unittest discover -s euler_stage1 -p 'test_*.py' -v
+      - name: Discover real Euler vault borrow assets and liquidation logs
+        run: python3 euler_stage1/discover.py
+      - name: Archive all public data, errors and exact source
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-euler-evk-real-liquidations
+          path: |
+            euler_evidence/
+            euler_stage1/
+          retention-days: 14
