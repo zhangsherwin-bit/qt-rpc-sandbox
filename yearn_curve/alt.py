@@ -68,7 +68,7 @@ def do():
       "cases":[],"complete":False}
   S.save('REPORT.json',rep)
   try:
-    saved=json.loads(Path('input_quotes/REPORT.json').read_text())
+    saved=json.loads(Path('input_quotes/yearn_exit_evidence/REPORT.json').read_text())
     cases=saved['cases']
     if len(cases)!=6 or not saved['complete'] or not all(x.get('receipt_checked') for x in cases):
         raise ValueError("Frozen baseline receipts missing")
