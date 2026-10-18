@@ -10,7 +10,7 @@ OUT=Path("vault_scan_evidence");OUT.mkdir(exist_ok=True)
 USDC={1:"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       8453:"0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"}
 RPC={1:"https://rpc-eth.blockmachine.io",8453:"https://mainnet.base.org"}
-FACTORY="0x1f98431c8ad98523631ae4a59f267346ea31f984"
+FACTORY={1:"0x1f98431c8ad98523631ae4a59f267346ea31f984",8453:"0x33128a8fc17869897dce68ed026d694621f6fdfd"}
 QUOTER={1:"0x61ffe014ba17989e743c5f6cb21bf9697530b21e",8453:"0x3d4e44eb1374240ce5f1b871ab261cd16335b76a"}
 FEE_TIERS=(100,500,3000,10000)
 SIZES=(500,5000,25000)
@@ -126,7 +126,7 @@ def scan_vault(chain,v,block):
             record["pools"].append(row)
             try:
                 data=signature("getPool(address,address,uint24)")+arg_addr(USDC[chain])+arg_addr(address)+word(fee)
-                pool=decode_address(call(chain,"factory_get_pool",FACTORY,data,block))
+                pool=decode_address(call(chain,"factory_get_pool",FACTORY[chain],data,block))
                 row["pool"]=pool
                 if int(pool,16)==0:
                     row["status"]="NO_POOL";continue
@@ -156,7 +156,7 @@ def scan_vault(chain,v,block):
     except Exception as e:record["state"]="UNAVAILABLE";record["error"]=repr(e)
     return record
 def main():
-    report={"research":"Stage1 vault-share claim conversion discovery",
+    report={"research":"Stage1 Base-only vault-share conversion after separate Ethereum RPC 429",
       "no_signed_or_sent_trades":True,"quote_is_not_profit":True,
       "conditions":["Actual Uniswap pool inventory, exact same-state swap, ERC4626 redeem, no transfer gates, gas and winning inclusion price required before declaring profit",
         "Uniswap Quoter exact-input partial consumption near price limits may not be identifiable",
@@ -166,7 +166,7 @@ def main():
       "selected":[],"chains":{},"results":[],"errors":[],"finished":False}
     save("REPORT.json",report)
     try:
-        for chain in (1,8453):
+        for chain in (8453,):
             if int(rpc(chain,"network_identity","eth_chainId",[]),16)!=chain:raise ValueError("wrong chain")
             header=rpc(chain,"pin_header","eth_getBlockByNumber",["latest",False])
             report["chains"][str(chain)]={"block":int(header["number"],16),"hash":header["hash"],"timestamp":int(header["timestamp"],16)}
