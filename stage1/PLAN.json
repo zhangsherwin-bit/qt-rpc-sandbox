@@ -1,16 +1,17 @@
 {
- "version": "Stage1-v1-20261018",
- "scope": "Evidence register of prior QT mechanisms plus three newly bounded broader screens",
+ "version": "Stage1-v1-20261018-public-data",
+ "scope": "Evidence register of prior QT mechanisms plus three newly bounded public-data screens",
+ "amendment_before_any_new_data": "Execution-code publication was blocked by platform safety checks. It was not retried or published. This job has no executor or state-override functionality. New outputs are quote-grade only, never new cash executions.",
  "new_families": ["DAI/USDS native conversion versus market exchange", "wstETH/stETH wrapping parity via independent cash venues", "binary complete-set prediction-market pricing"],
  "ethereum_dates_utc": ["2026-09-10T12:00:00+00:00", "2026-09-20T12:00:00+00:00", "2026-09-30T12:00:00+00:00"],
- "selection": "Fixed calendar times and fixed size/fee grids before retrieving any new outputs. Current pair metadata verifies deployment; liquidity and execution read at each actual historical state. No event selected by profitability.",
- "fee_tiers": [100, 500, 3000],
+ "selection": "Fixed calendar times, both directions, and fixed size/fee grids before retrieving new prices. Deployed token identities checked at historical block. No event selected by subsequent profit.",
+ "fee_tiers": [100, 500],
  "DAI_sizes": [100, 1000, 10000],
  "WETH_sizes": [0.1, 1, 10],
- "prediction_market_scope": "First up to 30 non-negative-risk active open binary markets among the 100 highest-liquidity returned rows. Both complete-set directions, sizes 5/25/100, two public book observations. These are gross no-fee upper-bound screens, not fills or cash executions. No trading, no claims of user regional eligibility.",
- "limits": {"max_requests": 240, "heavy_pause_seconds": 70, "max_heavy": 10, "runtime_seconds": 1600},
+ "prediction_market_scope": "First up to 30 standard non-negative-risk active open binary markets among the 100 highest-liquidity returned rows. Both complete-set directions, sizes 5/25/100, two public book observations. Gross no-fee upper bounds, not fills or settlements. No user regional-access assumption.",
+ "limits": {"max_requests": 360, "minimum_pause_seconds": 2, "runtime_seconds": 1250},
  "unavailable_is_not_zero": true,
  "no_live_transfers_signatures_keys_deployment_or_production_state_edits": true,
  "reserved_window_excluded": "2026-10-03 through 2026-10-09",
- "portfolio_counts": "Separate economic episodes, candidate variants, same-event alternatives and dependent routes. No annualization or forecast from retrospectively selected opportunities."
+ "counting": "Separate economic episodes from variants; no annualization or capture-rate estimate from snapshots."
 }
