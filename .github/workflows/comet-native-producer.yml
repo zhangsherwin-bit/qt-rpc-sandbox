@@ -1,0 +1,42 @@
+name: QT Stage1 direct WETH producer compensation challenge
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'comet_native/**'
+      - '.github/workflows/comet-native-producer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-comet-public-provider-replays
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline syntax and native payment protections
+        run: |
+          python3 -m py_compile comet_native/check.py comet_native/test_check.py comet_follow/run.py comet_flash/replay.py
+          python3 -m pip install pycryptodome==3.23.0 py-solc-x==2.0.5
+          python3 -m unittest discover -s comet_native -p 'test_*.py' -v
+      - name: Install fixed Solidity compiler wrapper
+        run: python3 -m pip install py-solc-x==2.0.5
+      - name: Reconstruct actual historical state and test four exact-output fee tiers
+        run: python3 comet_native/check.py
+      - name: Archive full execution evidence, compiler and source
+        if: always()
+        run: |
+          mkdir -p native_bid_evidence/source
+          cp comet_native/*.py comet_native/*.sol native_bid_evidence/source/
+          cp .github/workflows/comet-native-producer.yml native_bid_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-comet-native-producer-cash
+          path: native_bid_evidence/
+          retention-days: 14
