@@ -1,0 +1,34 @@
+name: QT Stage1 Comet $406 gross original winner cash audit
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'comet_winner/**'
+      - '.github/workflows/comet-winner-cash.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline cash accounting and trace safety tests
+        run: python3 -m unittest discover -s comet_winner -p 'test_*.py' -v
+      - name: Read canonical original liquidation and sale receipt/call trace
+        run: python3 comet_winner/trace.py
+      - name: Preserve all cash transfers, trace errors and exact code
+        if: always()
+        run: |
+          mkdir -p comet_winner_evidence/source
+          cp comet_winner/*.py comet_winner_evidence/source/
+          cp .github/workflows/comet-winner-cash.yml comet_winner_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-stage1-comet-406usd-original-cash
+          path: comet_winner_evidence/
+          retention-days: 14
