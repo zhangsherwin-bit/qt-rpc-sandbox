@@ -38,10 +38,13 @@ def main():
               'slow_relay_root':e['data']} for e in relayed]
         for x in r['relayed_root_events']:
             if x['block']>REFUND_BLOCK:raise ValueError('root relayed after refund')
-            proposal=c.rpc(1,'root_proposal','eth_getLogs',[{'address':HUB,'fromBlock':hex(26200000),
-               'toBlock':hex(26200000+9999),'topics':[PROPOSE,None,x['relayer_refund_root']]}])
-            # If absent, do not invent proposal time: earlier windows have to be checked.
-            x['first_proposal_page_matches']=[{'block':int(e['blockNumber'],16),'tx':e['transactionHash']} for e in proposal]
+            proposal=c.rpc(1,'root_proposal_current','eth_getLogs',[{'address':HUB,'fromBlock':hex(26210000),
+               'toBlock':hex(REFUND_BLOCK),'topics':[PROPOSE,None,x['relayer_refund_root']]}])
+            if not proposal:
+                proposal=c.rpc(1,'root_proposal_previous','eth_getLogs',[{'address':HUB,'fromBlock':hex(26200000),
+                    'toBlock':hex(26209999),'topics':[PROPOSE,None,x['relayer_refund_root']]}])
+            x['proposal_events']=[{'block':int(e['blockNumber'],16),'tx':e['transactionHash']} for e in proposal]
+            x['proposal_predates_deposit']=bool(proposal) and all(int(e['blockNumber'],16)<DEPOSIT_BLOCK for e in proposal)
         rec=c.rpc(1,'actual_refund_receipt','eth_getTransactionReceipt',[REFUND_TX])
         assert rec['status']=='0x1' and int(rec['blockNumber'],16)==REFUND_BLOCK
         leaves=[S.decode_refund(e) for e in rec['logs'] if e.get('topics') and e['topics'][0].lower() in (S.REFUND,S.LEGACY_REFUND)]
