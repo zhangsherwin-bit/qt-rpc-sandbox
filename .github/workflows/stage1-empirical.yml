@@ -1,0 +1,51 @@
+name: QT Stage 1 broad empirical evidence
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['broad_stage1/**', '.github/workflows/stage1-empirical.yml']
+permissions:
+  contents: read
+concurrency:
+  group: qt-public-ethereum-stage1-research
+  cancel-in-progress: false
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pinned hashing library
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline scope and accounting tests
+        run: python3 -m unittest discover -s broad_stage1 -p 'test_*.py' -v
+      - name: Collect Across cash-flow inputs and signed-order snapshots
+        run: |
+          mkdir -p api_work
+          cd api_work
+          python3 ../broad_stage1/run_stage.py api
+      - name: Preserve API data before longer chain scan
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-empirical-api
+          path: api_work/evidence/
+          retention-days: 14
+      - name: Full frozen calendar census and canonical payout traces
+        run: |
+          mkdir -p chain_work
+          cd chain_work
+          python3 ../broad_stage1/run_stage.py chain
+      - name: Archive exact code and partial chain evidence
+        if: always()
+        run: |
+          mkdir -p chain_work/evidence/source
+          cp broad_stage1/*.py .github/workflows/stage1-empirical.yml chain_work/evidence/source/
+      - name: Preserve calendar results and unresolved cases
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-empirical-chain
+          path: chain_work/evidence/
+          retention-days: 14
