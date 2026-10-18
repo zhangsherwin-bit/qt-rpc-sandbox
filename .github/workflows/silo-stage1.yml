@@ -1,0 +1,34 @@
+name: QT Stage1 SiloV3 new liquidation reward discovery
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'silo_stage1/**'
+      - '.github/workflows/silo-stage1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-silo-api
+  cancel-in-progress: false
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Offline source/profit-boundary tests
+        run: python3 -m unittest discover -s silo_stage1 -p 'test_*.py' -v
+      - name: Retrieve public Silo liquidation events and market coverage
+        run: python3 silo_stage1/complete.py
+      - name: Preserve all API, schema and empty/failed data evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-silo-liquidation-events
+          path: |
+            silo_complete_evidence/
+            silo_stage1/
+          retention-days: 14
