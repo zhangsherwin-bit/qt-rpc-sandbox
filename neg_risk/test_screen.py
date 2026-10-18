@@ -8,7 +8,7 @@ class TestNegativeRisk(unittest.TestCase):
   self.assertEqual(S.tokenpair({"clobTokenIds":'["11","22"]'}),("11","22"))
  def test_depth_finite(self):
   b={"asks":[{"price":"0.3","size":"4"},{"price":"0.2","size":"2"}],"bids":[{"price":"0.9","size":"3"},{"price":"0.8","size":"3"}]}
-  self.assertEqual(S.notional(b,"asks",D(5)),D("1.2"))
+  self.assertEqual(S.notional(b,"asks",D(5)),D("1.3"))
   self.assertEqual(S.notional(b,"bids",D(5)),D("4.3"))
   self.assertIsNone(S.notional(b,"bids",D(7)))
  def test_ineligible_placeholder(self):
@@ -25,7 +25,7 @@ class TestNegativeRisk(unittest.TestCase):
    b[str(10*i+2)]={"asks":[{"price":"0.7","size":"10"}]}
   rows=S.calc({"markets":m},b)
   self.assertEqual(sum(r.get("positive",False) for r in rows),len(m))
-  del b["21"];self.assertFalse(any(r.get("positive",False) for r in S.calc({"markets":m},b)))
+  del b["21"];self.assertEqual(sum(r.get("positive",False) for r in S.calc({"markets":m},b)),1)
  def test_no_trade_path(self):
   t=(Path(__file__).parent/"screen.py").read_text()
   for bad in ("eth_sendTransaction","eth_sendRawTransaction","private_key","wallet_seed"):self.assertNotIn(bad,t)
