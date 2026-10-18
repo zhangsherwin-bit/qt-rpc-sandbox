@@ -1,0 +1,46 @@
+name: QT Stage1 historical Comet cash-closure challenge
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'comet_flash/**'
+      - '.github/workflows/comet-flash-cash.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qt-blockmachine-heavy-historical-cash
+  cancel-in-progress: false
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: qt-stage1-comet-eight-markets
+          path: input_comet
+          run-id: 39115300565
+          github-token: ${{ github.token }}
+      - name: Pinned compiler
+        run: python3 -m pip install py-solc-x==2.0.5 pycryptodome==3.23.0
+      - name: Software controls before public RPC
+        run: python3 -m unittest discover -s comet_flash -p 'test_*.py' -v
+      - name: Historical USDC cash-settling flash-loan tests
+        run: python3 comet_flash/replay.py
+      - name: Preserve actual cash, rejected states and pinned executable source
+        if: always()
+        run: |
+          mkdir -p flash_evidence/source
+          cp comet_flash/*.sol comet_flash/*.py flash_evidence/source/
+          cp .github/workflows/comet-flash-cash.yml flash_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-comet-actual-usdc-payout
+          path: flash_evidence/
+          retention-days: 14
