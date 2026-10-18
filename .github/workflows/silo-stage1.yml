@@ -22,7 +22,7 @@ jobs:
       - name: Offline source/profit-boundary tests
         run: python3 -m unittest discover -s silo_stage1 -p 'test_*.py' -v
       - name: Retrieve public Silo liquidation events and market coverage
-        run: python3 silo_stage1/screen.py
+        run: python3 silo_stage1/complete.py
       - name: Preserve all API, schema and empty/failed data evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
