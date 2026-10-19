@@ -1,0 +1,39 @@
+name: QT Stage1 actual historical Fluid vault liquidations seven-day census
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'fluid_events/**'
+      - 'fluid_stage1/screen.py'
+      - '.github/workflows/fluid-events-stage1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-fluid-historical-events
+  cancel-in-progress: false
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Frozen ABI, 7-day window, permissions and safety
+        run: |
+          python3 -m unittest discover -s fluid_stage1 -p 'test_*.py' -v
+          python3 -m unittest discover -s fluid_events -p 'test_*.py' -v
+      - name: Real observed liquidation events from verified vault addresses
+        run: python3 fluid_events/census.py
+      - name: Archive receipt and range evidence including errors
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-fluid-real-liquidation-events
+          path: |
+            fluid_event_evidence/
+            fluid_evidence/
+            fluid_events/
+          retention-days: 14
