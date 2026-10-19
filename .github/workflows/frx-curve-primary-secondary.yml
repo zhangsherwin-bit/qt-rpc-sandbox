@@ -1,0 +1,35 @@
+name: QT Stage 1 frxUSD Curve issuer-redemption finite real quotes
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'stage1_frx_curve/**'
+      - '.github/workflows/frx-curve-primary-secondary.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-frx-curve-cash
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Syntax check
+        run: python3 -m py_compile stage1_frx_curve/probe.py
+      - name: Bounded same-chain read-only real Curve and custodian quote test
+        run: python3 stage1_frx_curve/probe.py
+      - name: Archive raw requests, responses, failure and SHA evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-frx-curve-primary-cash-evidence
+          path: |
+            frx_curve_evidence/
+            stage1_frx_curve/
+          retention-days: 14
