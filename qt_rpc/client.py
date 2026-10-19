@@ -234,7 +234,7 @@ class ReadOnlyRPC:
         self.limiter = limiter or WeightedLimiter(cap_ru=cap, sleeper=sleeper)
         self.max_attempts = max(1, min(4, max_attempts))
         self.max_requests = max_requests
-        self.opener = opener or urllib.request.urlopen
+        self.opener = opener  # explicit opener is reserved for offline unit mocks
         self.sleep = sleeper or time.sleep
         self.now_unix = now_unix or time.time
         self.archive = Path(archive_dir)
@@ -286,17 +286,41 @@ class ReadOnlyRPC:
             raw = b""
             resp_headers = {}
             try:
-                req = urllib.request.Request(
-                    self.endpoint, data=request_body, headers=headers, method="POST")
-                with self.opener(req, timeout=35) as response:
-                    status = response.status
-                    raw = response.read(2500000)
-                    resp_headers = response.headers
+                if self.opener is None:
+                    # Standard HTTP transport matches the prior successful
+                    # public/keyed RPC and status diagnostics. Never retry 403.
+                    import requests
+                    with requests.post(
+                        self.endpoint, data=request_body, headers=headers,
+                        timeout=(10, 35), allow_redirects=False, stream=True
+                    ) as response:
+                        status = response.status_code
+                        resp_headers = response.headers
+                        chunks, total = [], 0
+                        for chunk in response.iter_content(chunk_size=65536):
+                            if chunk:
+                                chunks.append(chunk)
+                                total += len(chunk)
+                                if total > 2500000:
+                                    break
+                        raw = b"".join(chunks)
+                else:
+                    req = urllib.request.Request(
+                        self.endpoint, data=request_body, headers=headers,
+                        method="POST")
+                    with self.opener(req, timeout=35) as response:
+                        status = response.status
+                        raw = response.read(2500000)
+                        resp_headers = response.headers
             except urllib.error.HTTPError as exc:
                 status = exc.code
                 raw = exc.read(2500000)
                 resp_headers = exc.headers
             except (OSError, TimeoutError) as exc:
+                raw = json.dumps({"transport_error": type(exc).__name__}).encode()
+            except Exception as exc:
+                # No exception message in output: some transports embed URLs.
+                # Do not retry or redirect a denied endpoint.
                 raw = json.dumps({"transport_error": type(exc).__name__}).encode()
             try:
                 result = json.loads(raw)
