@@ -14,11 +14,9 @@ SOURCE=[
 {"name":"vault_B","vault":"0xe3cac7cc6b0eed28e16331f08be7948bbfcb5acc","block":26175052,"tx":"0x25bce41e379cd4ed4010186d7e0c496f4d86bad3ee0c209a0e71eb9a65359b8c","event_debt_raw":513319760647775193},
 {"name":"vault_C","vault":"0xe16a6f5359abb1f61ce71e25dd0932e3e00b00eb","block":26193309,"tx":"0xc14dfce64a6951236742ea7807bedbb54b703c21c09495f1366836cfed056eff","event_debt_raw":6082140927},
 {"name":"vault_D","vault":"0x92643e964ca4b2c165a95ca919b0a819aca6d5f1","block":26194906,"tx":"0x620d083d030d5826e2c19d64e2b5f8327598ced7b7f6a78d811f1ab58dfbff54","event_debt_raw":272033908},
-{"name":"vault_E","vault":"0x6e0cdb09eb33cd3894c905e0dff9289b95a86fff","block":26194919,"tx":"0x70b312ae92b8a5b34712e74ca80542d8bc1d99e8f621d9e3dba97b27562d6703","event_debt_raw":77740}
+{"name":"vault_E","vault":"0x6e0cdb09eb33cd3894c905e0dff9289b95a86fff","block":26194919,"tx":"0x5e503dad7122fe296acf61ef865347fe28228470d79cc7e6cc981b6367255424","event_debt_raw":77740}
 ]
-# Liquidation event E is a chosen first-by-vault record, but tx hash above
-# must be checked against actual LogLiquidate event in canonical receipt.
-EVENT="0x"
+ # Each tx remains receipt-verified before any economic inference.
 def save(report): (OUT/"REPORT.json").write_text(json.dumps(report,indent=2)+"\n")
 def main():
  report={"scope":"Five distinct real Fluid Vault liquidation episodes from frozen source event census",
