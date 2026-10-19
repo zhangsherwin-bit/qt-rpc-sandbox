@@ -1,0 +1,44 @@
+name: QT Stage1 UMA OOv3 truth-dispute bond empirical census
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_uma_dispute/**'
+      - '.github/workflows/stage1-uma-oov3-disputes.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-uma-dispute-free-subgraph
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3
+      - name: Parse and test fee semantics without network
+        run: python3 -m py_compile stage1_uma_dispute/census.py && python3 -m unittest discover -s stage1_uma_dispute -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3
+      - name: Twelve bounded public read-only UMA subgraph calls
+        run: PYTHONPATH=. python3 stage1_uma_dispute/census.py
+      - name: Archive original GraphQL responses incl failures and SHA-256
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-uma-dispute-evidence
+          path: |
+            uma_oov3_evidence/
+            stage1_uma_dispute/
+          retention-days: 14
