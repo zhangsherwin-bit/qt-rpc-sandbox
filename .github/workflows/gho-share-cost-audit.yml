@@ -1,0 +1,34 @@
+name: QT Stage1 GHO GSM real ERC4626 share acquisition cost
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'gho_shares/**'
+      - '.github/workflows/gho-share-cost-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pinned ABI dependency
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline type and unit tests
+        run: python3 -m unittest discover -s gho_shares -p 'test_*.py' -v
+      - name: Verify ERC4626 share funding versus GHO resale in historical data
+        run: python3 gho_shares/audit.py
+      - name: Save every error, source and raw quote
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-gho-erc4626-real-funding-cost
+          path: |
+            gho_share_evidence/
+            gho_evidence/
+            gho_shares/
+          retention-days: 14
