@@ -54,7 +54,7 @@ class TestTransport(unittest.TestCase):
  def test_429_retry_and_archive_redacts_key(self):
   c=Clock();fake=Sequence([denied(429,{"jsonrpc":"2.0","error":{"code":-32029,"data":{"retry_after_ms":6000},"message":"limit"}}),Reply({"jsonrpc":"2.0","id":1,"result":"0x1"})])
   with tempfile.TemporaryDirectory() as folder:
-   obj=ReadOnlyRPC(1,folder,api_key="dont-put-this-token-in-evidence",opener=fake,now_unix=c.now,sleeper=c.sleep,limiter=WeightedLimiter(100,now=c.now,sleeper=c.sleep),status={"auth":"authenticated","rate_limit_rpm":200,"ru_remaining":978},budget=AuthenticatedBudget({"auth":"authenticated","ru_remaining":978},approved=True))
+   obj=ReadOnlyRPC(1,folder,api_key="dont-put-this-token-in-evidence",opener=fake,now_unix=c.now,sleeper=c.sleep,limiter=WeightedLimiter(100,now=c.now,sleeper=c.sleep),status={"auth":"authenticated","rate_limit_rpm":200,"ru_remaining":978},budget=AuthenticatedBudget({"auth":"authenticated","ru_remaining":10000},approved=True))
    self.assertEqual(obj.rpc("eth_chainId",[]),"0x1")
    self.assertEqual(obj.attempted,2)
    self.assertGreaterEqual(c.waited[0],6)
@@ -85,6 +85,27 @@ class TestTransport(unittest.TestCase):
    self.assertEqual(cm.exception.kind,"AUTHENTICATED_RUN_RU_CAP_REACHED")
    self.assertEqual(shared.attempted_ru,2)
    self.assertEqual(a.attempted+b.attempted,2)
+
+ def test_new_budget_default_and_reported_rpm(self):
+  status={"auth":"authenticated","rate_limit_rpm":300,"ru_remaining":10000}
+  b=AuthenticatedBudget(status,approved=True)
+  self.assertEqual(b.cap_ru,500)
+  b.admit(499)
+  b.admit(1)
+  with self.assertRaises(RPCFailure):b.admit(1)
+  low=AuthenticatedBudget({"auth":"authenticated","rate_limit_rpm":300,
+                           "ru_remaining":1700},approved=True)
+  self.assertEqual(low.cap_ru,200)
+  with self.assertRaises(RPCFailure):
+   AuthenticatedBudget({"auth":"authenticated","rate_limit_rpm":300,
+                        "ru_remaining":1450},approved=True)
+
+ def test_300_ru_min_soft_limit_is_165(self):
+  status={"auth":"authenticated","rate_limit_rpm":300,"ru_remaining":10000}
+  with tempfile.TemporaryDirectory() as folder:
+   obj=ReadOnlyRPC(1,folder,api_key="unit-test-not-real",
+                   opener=Sequence([]),status=status,budget=AuthenticatedBudget(status,approved=True))
+   self.assertEqual(obj.limiter.cap_ru,165)
 
  def test_reserve_prevents_any_paid_calls(self):
   with self.assertRaises(RPCFailure) as cm:
