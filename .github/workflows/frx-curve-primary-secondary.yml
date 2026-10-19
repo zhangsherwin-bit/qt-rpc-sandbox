@@ -25,7 +25,7 @@ jobs:
       - name: Bounded same-chain read-only real Curve and custodian quote test
         env:
           BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
-        run: python3 stage1_frx_curve/probe.py
+        run: PYTHONPATH=. python3 stage1_frx_curve/probe.py
       - name: Archive raw requests, responses, failure and SHA evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
