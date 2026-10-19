@@ -17,7 +17,7 @@ class TestFiveRealEvents(unittest.TestCase):
  def test_cash_is_quote_only(self):
   s=(Path(__file__).parent/"replay.py").read_text()
   self.assertIn('"cash_profit_proven":False',s)
-  self.assertIn('"positive_gross_quote_only"',s)
+  self.assertIn('"gross_positive_quote_only"',s)
   self.assertIn("producer payment",s)
  def test_only_read_methods(self):
   s=(Path(__file__).parent/"replay.py").read_text()
