@@ -9,12 +9,12 @@ name: QT Stage 1 Beefy public harvest reward cash audit
 permissions:
   contents: read
 concurrency:
-  group: qt-stage1-beefy-caller-cash
+  group: qt-stage1-global-blockmachine-reads
   cancel-in-progress: false
 jobs:
   census:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -22,8 +22,10 @@ jobs:
       - name: Install Keccak for verifiable ABI signatures
         run: python3 -m pip install pycryptodome==3.23.0
       - name: Verify Python syntax
-        run: python3 -m py_compile stage1_beefy_caller/probe.py
+        run: python3 -m py_compile qt_rpc/client.py stage1_beefy_caller/probe.py
       - name: Execute public read-only bounded API and on-chain census
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
         run: python3 stage1_beefy_caller/probe.py
       - name: Preserve original request-response SHA and failures
         if: always()
