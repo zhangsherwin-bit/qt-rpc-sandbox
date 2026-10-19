@@ -1,5 +1,7 @@
 """Offline tests, built from UMA's published ABI and Convex ERC20 interface."""
 import unittest
+from unittest.mock import patch
+from stage1_contrarian import census as experiment
 from stage1_contrarian.census import (
     SETTLED, DISPUTED, TRANSFER, CONVEX_BOOSTER,
     UMA_OOV3, parse_settled, parse_disputed, parse_crv_transfer, decode_assertion,
@@ -9,6 +11,18 @@ def word(v):
 def topic_address(a):
  return "0x"+word(int(a,16))
 class ContractTest(unittest.TestCase):
+ def test_recovered_convex_entry_not_overwritten_by_uma(self):
+  previous=experiment.RPT.get("chains")
+  try:
+   experiment.RPT["chains"]={"ethereum":{"convex":{"complete":True,"distinct_txs":390}}}
+   with patch.object(experiment,"read",side_effect=ValueError("offline_only_mock")):
+    with self.assertRaisesRegex(ValueError,"offline_only_mock"):
+     experiment.settle_chain(1)
+   self.assertEqual(experiment.RPT["chains"]["ethereum"]["convex"]["distinct_txs"],390)
+   self.assertIn("uma",experiment.RPT["chains"]["ethereum"])
+  finally:
+   experiment.RPT["chains"]=previous
+
  def test_oracles_from_official_deployments(self):
   self.assertEqual(UMA_OOV3[1],"0xfb55f43fb9f48f63f9269db7dde3bbbe1ebdc0de")
   self.assertEqual(UMA_OOV3[8453],"0x2abf1bd76655de80edb3086114315eec75af500c")
