@@ -15,3 +15,11 @@ https://blockmachine.io/docs/ai-agents
 https://blockmachine.io/docs/gateway-methods
 https://blockmachine.io/docs/base-rpc
 https://status.base.org/
+
+## Low-budget safeguard (978 RU reported 2026-10-19)
+**Do not place a fresh authenticated key in active experiment workflows merely to increase speed.**
+Even if BLOCKMACHINE_API_KEY is configured, authenticated RPC calls now require a second, explicit environment value `QT_ALLOW_AUTHENTICATED_RPC=YES`; otherwise ReadOnlyRPC stops before the first authenticated blockchain request. A read-only key-status query may still occur to diagnose allowance. This value is deliberately *not* present in GitHub experiment workflows.
+
+Once deliberately enabled, the monthly-account status snapshot must report numerical `ru_remaining`. The default `AuthenticatedBudget` protects a **900 RU floor** and a **50 RU per-process/run cap**, whichever binds first. Client instances operating on multiple chains must share one AuthenticatedBudget; PR81 shares it between ETH and Base. Each attempted RPC counts conservatively, even transient retries. The floor is a snapshot, not a guarantee against third-party usage or independent concurrent consumers of the same key.
+
+For routine innovation-first Stage 1, prefer no key, free public permitted sources, retained historical artifacts, and inexpensive falsification; use authenticated archive RU only for a pre-approved, narrow research question when public historical access is insufficient. Provider documentation says keyless is 60 RU/minute per IP with no monthly cap but **does not guarantee archive access**.
