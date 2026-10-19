@@ -1,0 +1,50 @@
+name: QT Stage1 contrarian oracle bonds and reward-batching empirical census
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_contrarian/**'
+      - '.github/workflows/stage1-contrarian.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-global-blockmachine-reads
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned read-only dependencies
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Compile and test economic ABI without network
+        run: python3 -m py_compile stage1_contrarian/census.py qt_rpc/client.py && python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v && python3 -m unittest discover -s stage1_contrarian -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned read-only dependencies
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: One-time 430-RU-max verified cash evidence collection
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
+          QT_ALLOW_AUTHENTICATED_RPC: YES
+          QT_PROVIDER_ACCOUNT_RIGHTS_CONFIRMED: YES
+        run: PYTHONPATH=. python3 stage1_contrarian/census.py
+      - name: Preserve all raw chain evidence and error diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-contrarian-cash-evidence
+          path: |
+            contrarian_cash_evidence/
+            stage1_contrarian/
+          retention-days: 14
