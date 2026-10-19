@@ -16,12 +16,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Install standard documented HTTP client
+        run: python3 -m pip install requests==2.32.3
       - name: Offline tests without credentials
         run: python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v
       - name: Compile read-only source
         run: python3 -m py_compile qt_rpc/client.py
-      - name: Install standard requests client for one-shot status check
-        run: python3 -m pip install requests==2.32.3
       - name: Sanitize and verify Blockmachine quota status (optional secret)
         continue-on-error: true
         env:
