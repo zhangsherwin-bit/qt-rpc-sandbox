@@ -24,6 +24,28 @@ jobs:
           python3 -c "from qt_innovation.probe import selector; assert selector('balanceOf(address)') == '0x70a08231'"
       - name: Bounded public RPC research
         run: python3 qt_innovation/probe.py
+      - name: Print read-only economics and provider blockers
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('qt_new_evidence/REPORT.json')
+          if p.exists():
+              d=json.loads(p.read_text())
+              for s in d.get('observations',[]):
+                  print('ANCHOR',s.get('anchor'))
+                  for r in s.get('size_results',[]):
+                      print('SIZE',r['usdc_input'])
+                      for v in r['routes']:
+                          print('ROUTE',v)
+                      print('FXB',r.get('fxb_claim_indication'))
+              k=d.get('keeper',{})
+              print('KEEPER',{'code':k.get('has_code'),'window':k.get('window'),'pages':k.get('pages'),'count':k.get('count'),'complete':k.get('complete')})
+              print('PROVIDER',d.get('errors'),d.get('request_count'),d.get('denied_hosts'))
+          else:
+              print('NO REPORT - execution ended before report creation')
+          PY
       - name: Preserve complete raw responses, errors and anchors
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
