@@ -1,0 +1,35 @@
+name: QT Stage1 Frax bond redemption and Kerf keeper research
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'qt_innovation/**'
+      - '.github/workflows/qt-stage1-innovation-frx-kerf.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned ABI dependency
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Check source and known EVM selector
+        run: |
+          python3 -m py_compile qt_innovation/probe.py
+          python3 -c "from qt_innovation.probe import selector; assert selector('balanceOf(address)') == '0x70a08231'"
+      - name: Bounded public RPC research
+        run: python3 qt_innovation/probe.py
+      - name: Preserve complete raw responses, errors and anchors
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-innovation-frax-kerf-20261019
+          path: |
+            qt_new_evidence/
+            qt_innovation/probe.py
+          retention-days: 14
