@@ -7,7 +7,7 @@ ERC20 transfer is terminal token cash. No wallets, claims, sales or tx signed.
 from collections import Counter, defaultdict
 from pathlib import Path
 from datetime import datetime, timezone
-from Crypto.Hash import keccak
+from Crypto.Hash import keccak as keccak_module
 from qt_rpc.client import ReadOnlyRPC, AuthenticatedBudget, WeightedLimiter, read_key_status, RPCFailure
 import json,os
 
@@ -29,7 +29,7 @@ RU_BUDGET=365
 RESERVE=1500
 BUDGET=None;RATE=None;STATUS=None;RPC={}
 def keccak(s):
- h=keccak.new(digest_bits=256);h.update(s.encode());return "0x"+h.hexdigest()
+ h=keccak_module.new(digest_bits=256);h.update(s.encode());return "0x"+h.hexdigest()
 CLAIM=keccak("ClaimedPrize(address,address,address,uint24,uint8,uint32,uint152,uint96,address)")
 WITHDRAW=keccak("WithdrawRewards(address,address,uint256,uint256)")
 TRANSFER=keccak("Transfer(address,address,uint256)")
