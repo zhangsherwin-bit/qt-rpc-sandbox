@@ -1,4 +1,7 @@
 import unittest
+import copy
+from unittest.mock import patch
+from stage1_uma_dispute import census as experiment
 from stage1_uma_dispute.census import (
     parse_assertion,COHORTS,CHAINS,query_for,ROWS_PER_QUERY,MAX_POSTS)
 
@@ -12,6 +15,22 @@ def fake(asserter="0x"+"aa"*20,disputer=None,recipient=None,bond="10000000",
   "disputeTimestamp":"1780100000" if disputer else None,
   "escalationManager":"0x"+"00"*20}
 class TestDispute(unittest.TestCase):
+ def test_first_provider_429_stops_all_shared_subgraphs(self):
+  original=copy.deepcopy(experiment.RPT)
+  try:
+   experiment.RPT["errors"]=[]
+   experiment.RPT["network_results"]={}
+   with patch.object(experiment,"save"):
+    with patch.object(experiment,"http_post",side_effect=RuntimeError("provider_denial_429")) as call:
+     self.assertEqual(experiment.main(),2)
+     self.assertEqual(call.call_count,1)
+     self.assertTrue(experiment.RPT["shared_provider_denial_stop"])
+     self.assertEqual(len(experiment.RPT["unqueried_networks"]),3)
+     self.assertFalse(experiment.RPT["complete"])
+  finally:
+   experiment.RPT.clear()
+   experiment.RPT.update(original)
+
  def test_dispute_winner_raw_cash_is_payout_less_bond(self):
   d="0x"+"bb"*20
   v=parse_assertion(fake(disputer=d,recipient=d,payout="19500000",settled="1780400000",resolution=False))
