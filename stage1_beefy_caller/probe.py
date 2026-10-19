@@ -87,6 +87,9 @@ def find_value(d,vid,chain):
   if vid in d and isinstance(d[vid],(int,float)):return float(d[vid])
   nested=d.get(chain)
   if isinstance(nested,dict) and vid in nested:return float(nested[vid])
+  chain_id=str(CHAINS[chain]["id"])
+  nested=d.get(chain_id)
+  if isinstance(nested,dict) and vid in nested:return float(nested[vid])
  return 0.0
 def select():
  vaults=fetch_json(API+"/vaults","API_vaults")
