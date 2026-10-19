@@ -1,5 +1,6 @@
 """Prize is not caller cash until credited rewards are withdrawn as ERC20."""
 import unittest
+from Crypto.Hash import keccak as reference_keccak
 from stage1_prize_cash.scan import (
  CLAIM,WITHDRAW,TRANSFER,DEPLOYED,
  decode_claim,decode_withdraw,check_transfer,BATCH_SIZES,
@@ -7,6 +8,17 @@ from stage1_prize_cash.scan import (
 def w(x):return format(int(x),"064x")
 def topicaddr(a):return "0x"+w(int(a,16))
 class TestPrize(unittest.TestCase):
+ def test_event_topics_are_computed_from_official_abi(self):
+  signatures={
+   "ClaimedPrize(address,address,address,uint24,uint8,uint32,uint152,uint96,address)":CLAIM,
+   "WithdrawRewards(address,address,uint256,uint256)":WITHDRAW,
+   "Transfer(address,address,uint256)":TRANSFER}
+  for signature, actual in signatures.items():
+   h=reference_keccak.new(digest_bits=256)
+   h.update(signature.encode())
+   self.assertEqual(actual,"0x"+h.hexdigest())
+   self.assertEqual(len(actual),66)
+
  def test_official_deployment_sources(self):
   self.assertEqual(DEPLOYED[8453]["claimer"],"0xcdce635b774de77cdf791647601dba64a75547ba")
   self.assertEqual(DEPLOYED[1]["pool"],"0x7865d01da4c9ba2f69b7879e6d2483ab6b354d95")
