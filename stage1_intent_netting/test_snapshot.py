@@ -1,6 +1,6 @@
 import unittest
 from stage1_intent_netting.snapshot import (
-    normalize_order,all_nonnegative_inventory,evaluate,net,REQUIRED_CHAINS
+    normalize_order,all_nonnegative_inventory,evaluate,net,SOURCES
 )
 A="0x"+"11"*20;B="0x"+"22"*20;C="0x"+"33"*20
 def make(ident,chain,typ,coin,other,input_amount,output_amount,fee=0):
@@ -39,6 +39,6 @@ class TestNetting(unittest.TestCase):
   o=make("big",8453,"Dutch_V3",A,B,10**23,10**20)
   r=normalize_order(o,8453,"Dutch_V3")
   self.assertEqual(r["conservative_input_raw"],10**23)
- def test_source_order_and_frozen_limit(self):
-  self.assertEqual(REQUIRED_CHAINS if False else True,True)
+ def test_source_order_is_predeclared(self):
+  self.assertEqual(SOURCES,[(1,'Dutch_V2'),(8453,'Dutch_V3')])
 if __name__=="__main__":unittest.main()
