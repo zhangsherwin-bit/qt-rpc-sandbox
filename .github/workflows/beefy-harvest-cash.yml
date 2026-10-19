@@ -26,7 +26,7 @@ jobs:
       - name: Execute public read-only bounded API and on-chain census
         env:
           BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
-        run: python3 stage1_beefy_caller/probe.py
+        run: PYTHONPATH=. python3 stage1_beefy_caller/probe.py
       - name: Preserve original request-response SHA and failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
