@@ -63,8 +63,8 @@ def safe_hex(h):
 def contract_call(rpc,to,sigstr,block,args=()):
  data=selector(sigstr)+"".join(word(x) for x in args)
  return rpc.rpc("eth_call",[{"to":to,"data":data},hex(block)])
-def get_addr(rpc,to,name,block):
- return address_from_hex(contract_call(rpc,to,name,block))
+def get_addr(rpc,to,name,block,args=()):
+ return address_from_hex(contract_call(rpc,to,name,block,args))
 def get_uint(rpc,to,name,block):
  return safe_hex(contract_call(rpc,to,name,block))
 def state(rpc,keeper,at,name):
@@ -271,7 +271,8 @@ def main():
  write()
  # Still test public intent access if archive RPC fails, entirely separate API.
  public_intents()
- R["complete"]=bool(R["smoke"].get("pass")) and R["pegkeeper"].get("all_log_windows_complete") is True
+ R["pegkeeper"]["state_coverage_complete"]=len(R["pegkeeper"]["snapshots"])==len(STATE_OFFSETS) and all(len(x["keepers"])==len(ADDRESS) for x in R["pegkeeper"]["snapshots"])
+ R["complete"]=bool(R["smoke"].get("pass")) and R["pegkeeper"].get("all_log_windows_complete") is True and R["pegkeeper"]["state_coverage_complete"]
  write()
  print(json.dumps({"complete":R["complete"],"smoke":R["smoke"].get("pass"),
       "keeper_logs":sum(x.get("events") or 0 for x in R["pegkeeper"]["log_windows"]),
