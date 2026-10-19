@@ -47,7 +47,7 @@ PAIRS={
  },
  BASE:{"UniswapV2":[("WETH","USDC"),("WETH","DAI"),("USDC","DAI")]}
 }
-BENTO="0xF5BCE5077908a1b7370B9Ae04Ad1eaB9f7E2B29a"
+BENTO="0xf5bce5077908a1b7370b9ae04adc565ebd643966"
 BENTO_TOKENS=["USDC","USDT","WETH","DAI"]  # no rebase, no strategies presumed
 SNAPSHOT_OFFSETS=[8,20008,70008,150008,360008]
 BENTO_SNAPSHOTS=3 # first three offsets, fixed before fetching data
