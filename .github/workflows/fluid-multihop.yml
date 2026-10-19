@@ -1,0 +1,37 @@
+name: QT Stage1 real Fluid liquidation multi-hop cash-out feasibility
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'fluid_multihop/**'
+      - '.github/workflows/fluid-multihop.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-fluid-multihop-reads
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline original amount and path validation
+        run: |
+          python3 -m unittest discover -s fluid_stage1 -p 'test_*.py' -v
+          python3 -m unittest discover -s fluid_multihop -p 'test_*.py' -v
+      - name: Historical real seized collateral to exact debt cash DEX route screen
+        run: python3 fluid_multihop/quoted_cash.py
+      - name: Save raw quotes, actual winner receipts and unavailable states
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-fluid-multihop-original-cash-quotes
+          path: |
+            fluid_multihop_evidence/
+            fluid_multihop/
+          retention-days: 14
