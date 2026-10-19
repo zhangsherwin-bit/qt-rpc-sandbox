@@ -1,0 +1,36 @@
+name: QT Stage1 Fluid vault liquidation and actual cash availability
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'fluid_stage1/**'
+      - '.github/workflows/fluid-stage1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-fluid-bounded-public-reads
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned ABI keccak dependency
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline integer ledger and branch controls
+        run: python3 -m unittest discover -s fluid_stage1 -p 'test_*.py' -v
+      - name: Inspect actual Liquidate resolver state and amount-specific cash venues
+        run: python3 fluid_stage1/screen.py
+      - name: Save raw results and all unavailable/failed cases
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-fluid-vault-real-liquidation-cash-screen
+          path: |
+            fluid_evidence/
+            fluid_stage1/
+          retention-days: 14
