@@ -1,0 +1,50 @@
+name: QT Stage1 accounting asymmetry read-only historical cash screen
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_accounting_surplus/**'
+      - '.github/workflows/stage1-accounting-surplus.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-global-blockmachine-reads
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned dependencies
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Syntax and unit tests (no network, no secret)
+        run: python3 -m py_compile qt_rpc/client.py stage1_accounting_surplus/probe.py && python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v && python3 -m unittest discover -s stage1_accounting_surplus -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned read-only dependencies
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Run predeclared Ethereum/Base balance-reserve and Bento evidence
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
+          QT_ALLOW_AUTHENTICATED_RPC: YES
+          QT_PROVIDER_ACCOUNT_RIGHTS_CONFIRMED: YES
+        run: PYTHONPATH=. python3 stage1_accounting_surplus/probe.py
+      - name: Preserve all valid and failed response evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-accounting-surplus-evidence
+          path: |
+            stage1_accounting_surplus/
+            stage1_accounting_surplus_evidence/
+          retention-days: 14
