@@ -1,0 +1,33 @@
+name: QT Stage1 new economic cash inventory discovery
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'stage1_innovation/**'
+      - '.github/workflows/stage1-innovation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Set up independent read-only ABI runner
+        run: python3 -m pip install pycryptodome==3.23.0
+      - name: Run offline safety and accounting invariant tests
+        run: python3 -m unittest discover -s stage1_innovation -p 'test_*.py' -v
+      - name: Test issuer cash exits and share/LP markets at two historical snapshots
+        run: python3 stage1_innovation/screen.py
+      - name: Preserve report, request metadata, raw RPC responses and code even on incomplete result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-innovation-independent-cash
+          path: |
+            stage1_innovation_evidence/
+            stage1_innovation/
+          retention-days: 14
