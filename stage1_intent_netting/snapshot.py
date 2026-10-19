@@ -131,7 +131,12 @@ def get_order_snapshot(chain,kind,wave):
   with requests.get(url,headers={"Accept":"application/json","User-Agent":"QT-Stage1-Research/1"},
                     timeout=(10,23),allow_redirects=False,stream=True) as response:
    status=response.status_code
-   raw=response.raw.read(2_400_000)
+   chunks=[];total=0
+   for chunk in response.iter_content(chunk_size=65536):
+    if chunk:
+     chunks.append(chunk);total+=len(chunk)
+     if total>2_400_000:break
+   raw=b''.join(chunks)
  except Exception as exc:
   rec["transport_failure"]=type(exc).__name__
  finally:
