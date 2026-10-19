@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from urllib.error import HTTPError
 from qt_rpc.client import WeightedLimiter, ReadOnlyRPC, RPCFailure, AuthenticatedBudget, parse_retry_seconds, request_units, read_key_status
 
@@ -17,6 +18,15 @@ class Reply:
  def __enter__(self):return self
  def __exit__(self,*args):return False
  def read(self,n):return self.raw.read(n)
+
+class RequestsReply:
+ def __init__(self,obj,status=200,headers=None):
+  self.obj=obj;self.status_code=status;self.headers=headers or {}
+ def __enter__(self):return self
+ def __exit__(self,*args):return False
+ def iter_content(self,chunk_size=65536):
+  yield json.dumps(self.obj).encode()
+ def json(self):return self.obj
 
 class Sequence:
  def __init__(self,entries):self.entries=list(entries);self.headers=[]
@@ -43,6 +53,36 @@ class TestTransport(unittest.TestCase):
   lim.admit(10);lim.admit(10);lim.admit(10)
   self.assertGreaterEqual(sum(c.waited),60.0)
   self.assertLessEqual(sum(w for t,w in lim.events),25)
+
+ def test_requests_status_client_matches_previous_http_repair(self):
+  fake=RequestsReply({"status":"active","rate_limit_rpm":300,
+                      "ru_budget":10000,"ru_remaining":10000,
+                      "is_exhausted":False,"key_prefix":"DO_NOT_REPORT"})
+  with patch("requests.get",return_value=fake) as request:
+   result=read_key_status("dummy-not-real")
+   self.assertEqual(result["rate_limit_rpm"],300)
+   self.assertEqual(result["ru_remaining"],10000)
+   self.assertNotIn("key_prefix",result)
+   self.assertEqual(request.call_args.kwargs["headers"]["Authorization"],
+                    "Bearer dummy-not-real")
+   self.assertFalse(request.call_args.kwargs["allow_redirects"])
+
+ def test_requests_rpc_transport_keeps_readonly_gate_and_403_stop(self):
+  with tempfile.TemporaryDirectory() as folder:
+   ok=RequestsReply({"jsonrpc":"2.0","id":1,"result":"0x1"})
+   with patch("requests.post",return_value=ok) as request:
+    client=ReadOnlyRPC(1,folder,api_key="")
+    self.assertEqual(client.rpc("eth_chainId",[]),"0x1")
+    self.assertEqual(request.call_count,1)
+    self.assertNotIn("Authorization",request.call_args.kwargs["headers"])
+   denied=RequestsReply({"error":"Cloudflare 1010"},status=403,
+                        headers={"Server":"cloudflare"})
+   with patch("requests.post",return_value=denied) as request:
+    client=ReadOnlyRPC(1,Path(folder)/"denied",api_key="")
+    with self.assertRaises(RPCFailure) as err:client.rpc("eth_chainId",[])
+    self.assertEqual(err.exception.kind,"AUTH_OR_ACCESS_DENIED")
+    self.assertEqual(request.call_count,1)
+    self.assertTrue(client.aborted)
 
  def test_status_bearer_header_no_key_output(self):
   fake=Sequence([Reply({"status":"active","rate_limit_rpm":300,"ru_budget":10000,"ru_remaining":7899,"is_exhausted":False})])
