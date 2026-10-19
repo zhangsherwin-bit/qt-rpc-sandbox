@@ -6,7 +6,7 @@ import json, time, re, hashlib, urllib.request, urllib.error, traceback, sys, os
 from pathlib import Path
 from datetime import datetime, timezone
 from Crypto.Hash import keccak
-from qt_rpc.client import ReadOnlyRPC, WeightedLimiter, read_key_status
+from qt_rpc.client import ReadOnlyRPC, WeightedLimiter, AuthenticatedBudget, read_key_status
 
 OUT=Path("beefy_caller_evidence");OUT.mkdir(exist_ok=True)
 API="https://api.beefy.finance"
@@ -71,18 +71,21 @@ def fetch_json(url,label,maxsize=15000000,post=None):
 RPC_SESSIONS={}
 SHARED_STATUS=None
 SHARED_QUOTA=None
+SHARED_BUDGET=None
 def rpc(chain,method,params):
- global SHARED_STATUS,SHARED_QUOTA
+ global SHARED_STATUS,SHARED_QUOTA,SHARED_BUDGET
  if SHARED_STATUS is None:
   SHARED_STATUS=read_key_status(os.environ.get("BLOCKMACHINE_API_KEY","").strip())
   ru=(SHARED_STATUS["rate_limit_rpm"] if SHARED_STATUS["auth"]=="authenticated" else 60)
   SHARED_QUOTA=WeightedLimiter(cap_ru=max(5,int(ru*.55)))
+  if SHARED_STATUS["auth"]=="authenticated":
+   SHARED_BUDGET=AuthenticatedBudget(SHARED_STATUS)
   rpt["rpc_auth_mode"]=SHARED_STATUS["auth"]
   rpt["rpc_ru_limit_reported"]=SHARED_STATUS["rate_limit_rpm"]
   rpt["rpc_ru_remaining_at_start"]=SHARED_STATUS["ru_remaining"]
  if chain not in RPC_SESSIONS:
   RPC_SESSIONS[chain]=ReadOnlyRPC(CHAINS[chain]["id"],OUT/"rpc_attempts"/chain,
-     limiter=SHARED_QUOTA,max_requests=85,status=SHARED_STATUS)
+     limiter=SHARED_QUOTA,max_requests=85,status=SHARED_STATUS,budget=SHARED_BUDGET)
  try:
   return RPC_SESSIONS[chain].rpc(method,params)
  finally:
