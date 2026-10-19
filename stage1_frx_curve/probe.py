@@ -1,9 +1,10 @@
 """Stage 1 frxUSD public Curve acquisition -> exact issuer USDC redemption route.
 Three-leg genuine USDC-funded quote, no nominal stablecoin-par shortcut, no trades.
 """
-import json, time, hashlib, urllib.request, urllib.error, sys, traceback
+import json, time, hashlib, urllib.request, urllib.error, sys, traceback, os
 from pathlib import Path
 from Crypto.Hash import keccak
+from qt_rpc.client import ReadOnlyRPC
 from datetime import datetime,timezone
 OUT=Path("frx_curve_evidence");OUT.mkdir(exist_ok=True)
 RPC="https://rpc-eth.blockmachine.io"
@@ -15,11 +16,14 @@ USDT="0xdac17f958d2ee523a2206206994597c13d831ec7"
 FRX="0xcacd6fd266af91b8aed52accc382b4e165586e29"
 SIZE_USDC=[100,1000,5000,25000]
 BLOCK_OFFSETS=[4,7004,27004,77004]
+# Reproduce the original 2026-10-19 frozen sample. The final unobserved
+# block is derived from the original tip=26225726, not a fresh profitable choice.
+FROZEN_BLOCKS=[26225722,26218722,26198722,26148722]
 RPT={"date":datetime.now(timezone.utc).isoformat(),"title":"Curve frxUSD secondary acquisition plus issuer primary USDC redemption",
      "economic_path":"USDC -> USDT Curve3pool -> frxUSD Curve NG -> USDC frxUSD Custodian",
      "contracts":{"threepool":THREE,"frxusdt_curve_ng":FRXPOOL,"frx_usdc_custodian":CUST},
      "cost_accounting":"Start with exactly nominal USDC amount actually spent in 3pool. Use true finite USDT and frxUSD outputs, previewRedeem fee-adjusted USDC. No assumption USDT=USDC or frxUSD at par.",
-     "frozen_design":{"block_offsets":BLOCK_OFFSETS,"input_sizes_usdc":SIZE_USDC,"read_only":True},
+     "frozen_design":{"block_offsets":BLOCK_OFFSETS,"frozen_sample_blocks":FROZEN_BLOCKS,"input_sizes_usdc":SIZE_USDC,"read_only":True},
      "rows":[],"failures":[],"rpc_count":0,"complete":False,
      "permissionless_claim_not_verified":True,"full_atomic_cash_execution_verified":False,
      "own_captured_profit":False,"no_trades_signed_or_sent":True}
@@ -29,32 +33,18 @@ def sig(s):
  k=keccak.new(digest_bits=256);k.update(s.encode());return "0x"+k.hexdigest()[:8]
 def word(v):return format(v,"064x")
 def addr(v):return "0x"+v[-40:].lower()
+RPC_SESSION=None
 def rpc(method,params):
- global DENIED
- if DENIED:raise RuntimeError("earlier HTTP denial; stopping")
- if RPT["rpc_count"]>=100:raise RuntimeError("fixed read-only RPC count cap")
- RPT["rpc_count"]+=1
- name=f'{RPT["rpc_count"]:03d}'
- body=json.dumps({"jsonrpc":"2.0","id":RPT["rpc_count"],"method":method,"params":params},sort_keys=True).encode()
- out=b"";status=-1
- try:
-  time.sleep(.45)
-  req=urllib.request.Request(RPC,data=body,headers={"Content-Type":"application/json","User-Agent":"QT-Stage1-ReadOnly"},method="POST")
-  with urllib.request.urlopen(req,timeout=30) as f:
-   status=f.status;out=f.read(1200000)
- except urllib.error.HTTPError as e:status=e.code;out=e.read(120000)
+ global RPC_SESSION
+ if RPC_SESSION is None:
+  RPC_SESSION=ReadOnlyRPC(1,OUT/"rpc_attempts",max_requests=145)
+  RPT["rpc_auth_mode"]=RPC_SESSION.status["auth"]
+  RPT["rpc_ru_limit_reported"]=RPC_SESSION.status.get("rate_limit_rpm")
+  RPT["rpc_ru_remaining_at_start"]=RPC_SESSION.status.get("ru_remaining")
+ try:return RPC_SESSION.rpc(method,params)
  finally:
-  d=OUT/"raw";d.mkdir(exist_ok=True)
-  (d/(name+".request.json")).write_bytes(body)
-  (d/(name+".response.json")).write_bytes(out)
-  (d/(name+".sha256")).write_text(hashlib.sha256(out).hexdigest()+"\n")
+  RPT["rpc_count"]=RPC_SESSION.attempted
   save()
- if status in (401,403,429):DENIED=True;raise RuntimeError(f"provider HTTP {status}: stopped")
- if status!=200:raise RuntimeError(f"provider HTTP {status}")
- obj=json.loads(out)
- if "error" in obj:raise RuntimeError(str(obj["error"])[:350])
- if "result" not in obj:raise RuntimeError("missing RPC result")
- return obj["result"]
 def ethcall(to,data,b):
  out=rpc("eth_call",[{"to":to,"data":data},hex(b)])
  if not isinstance(out,str) or not out.startswith("0x") or len(out)<66:raise ValueError("empty ABI return")
@@ -77,8 +67,8 @@ def main():
  try:
   if int(rpc("eth_chainId",[]),16)!=1:raise RuntimeError("Ethereum chain mismatch")
   tip=int(rpc("eth_blockNumber",[]),16)
-  for offset in BLOCK_OFFSETS:
-   b=tip-offset
+  for b in FROZEN_BLOCKS:
+   if b>tip:raise RuntimeError("frozen sample is in future on provider")
    row={"anchor":snapshot(b),"candidate_checks":[],"route_supported":False}
    RPT["rows"].append(row)
    try:
