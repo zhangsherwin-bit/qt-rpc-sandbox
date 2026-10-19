@@ -4,12 +4,15 @@ No strategy profitability attribution from nominal incentive; preserve actual re
 """
 import sys,json,time,traceback,datetime
 from pathlib import Path
+from Crypto.Hash import keccak
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from fluid_stage1 import screen as S
 OUT=Path("fluid_event_evidence");OUT.mkdir(parents=True,exist_ok=True)
 END=26220131;WINDOW=57000;START=END-WINDOW+1
 BLOCK_STEP=9500
-EVENT=S.sig("LogLiquidate(address,uint256,uint256,address)")
+_event_hasher=keccak.new(digest_bits=256)
+_event_hasher.update(b"LogLiquidate(address,uint256,uint256,address)")
+EVENT="0x"+_event_hasher.hexdigest()
 LAST_LOG=-10**10
 def save(d):
  (OUT/"REPORT.json").write_text(json.dumps(d,indent=2)+"\n")
