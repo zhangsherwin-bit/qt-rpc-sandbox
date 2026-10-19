@@ -155,7 +155,7 @@ class AuthenticatedBudget:
     or crossing the RU reserve measured at the key-status snapshot.
     Other account consumers can change actual remaining RU independently.
     """
-    def __init__(self, status, reserve_floor=900, max_run_ru=50,
+    def __init__(self, status, reserve_floor=1500, max_run_ru=500,
                  approved=None):
         if status.get("auth") != "authenticated":
             raise RPCFailure("AUTHENTICATED_STATUS_REQUIRED")
