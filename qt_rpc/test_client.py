@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
-from qt_rpc.client import WeightedLimiter, ReadOnlyRPC, RPCFailure, parse_retry_seconds, request_units, read_key_status
+from qt_rpc.client import WeightedLimiter, ReadOnlyRPC, RPCFailure, AuthenticatedBudget, parse_retry_seconds, request_units, read_key_status
 
 class Clock:
  def __init__(self):self.t=1000.0;self.waited=[]
@@ -54,13 +54,42 @@ class TestTransport(unittest.TestCase):
  def test_429_retry_and_archive_redacts_key(self):
   c=Clock();fake=Sequence([denied(429,{"jsonrpc":"2.0","error":{"code":-32029,"data":{"retry_after_ms":6000},"message":"limit"}}),Reply({"jsonrpc":"2.0","id":1,"result":"0x1"})])
   with tempfile.TemporaryDirectory() as folder:
-   obj=ReadOnlyRPC(1,folder,api_key="dont-put-this-token-in-evidence",opener=fake,now_unix=c.now,sleeper=c.sleep,limiter=WeightedLimiter(100,now=c.now,sleeper=c.sleep),status={"auth":"authenticated","rate_limit_rpm":200})
+   obj=ReadOnlyRPC(1,folder,api_key="dont-put-this-token-in-evidence",opener=fake,now_unix=c.now,sleeper=c.sleep,limiter=WeightedLimiter(100,now=c.now,sleeper=c.sleep),status={"auth":"authenticated","rate_limit_rpm":200,"ru_remaining":978},budget=AuthenticatedBudget({"auth":"authenticated","ru_remaining":978},approved=True))
    self.assertEqual(obj.rpc("eth_chainId",[]),"0x1")
    self.assertEqual(obj.attempted,2)
    self.assertGreaterEqual(c.waited[0],6)
    for f in Path(folder).iterdir():self.assertNotIn(b"dont-put-this-token-in-evidence",f.read_bytes())
    self.assertEqual(len(obj.logs),2)
    self.assertEqual(fake.headers[0]["Authorization"],"Bearer dont-put-this-token-in-evidence")
+
+ def test_requires_distinct_opt_in_even_when_secret_exists(self):
+  status={"auth":"authenticated","rate_limit_rpm":300,"ru_remaining":978}
+  with self.assertRaises(RPCFailure) as cm:
+   AuthenticatedBudget(status,approved=False)
+  self.assertEqual(cm.exception.kind,"AUTHENTICATED_RU_SPENDING_NOT_APPROVED")
+  with self.assertRaises(RPCFailure) as cm:
+   AuthenticatedBudget({"auth":"authenticated"},approved=True)
+  self.assertEqual(cm.exception.kind,"AUTHENTICATED_REMAINING_RU_UNAVAILABLE")
+
+ def test_monthly_floor_and_per_run_limit_across_chains(self):
+  status={"auth":"authenticated","rate_limit_rpm":300,"ru_remaining":978}
+  shared=AuthenticatedBudget(status,reserve_floor=975,max_run_ru=2,approved=True)
+  fake=Sequence([Reply({"result":"0x1"}),Reply({"result":"0x2"})])
+  with tempfile.TemporaryDirectory() as folder:
+   a=ReadOnlyRPC(1,Path(folder)/"eth",api_key="dummy-not-secret",status=status,opener=fake,budget=shared)
+   b=ReadOnlyRPC(8453,Path(folder)/"base",api_key="dummy-not-secret",status=status,opener=fake,budget=shared)
+   self.assertEqual(a.rpc("eth_chainId",[]),"0x1")
+   self.assertEqual(b.rpc("eth_chainId",[]),"0x2")
+   with self.assertRaises(RPCFailure) as cm:
+    a.rpc("eth_chainId",[])
+   self.assertEqual(cm.exception.kind,"AUTHENTICATED_RUN_RU_CAP_REACHED")
+   self.assertEqual(shared.attempted_ru,2)
+   self.assertEqual(a.attempted+b.attempted,2)
+
+ def test_reserve_prevents_any_paid_calls(self):
+  with self.assertRaises(RPCFailure) as cm:
+   AuthenticatedBudget({"auth":"authenticated","ru_remaining":899},reserve_floor=900,approved=True)
+  self.assertEqual(cm.exception.kind,"MONTHLY_RU_RESERVE_PROTECTED")
 
  def test_keyless_no_auth_header(self):
   fake=Sequence([Reply({"jsonrpc":"2.0","result":"0x1"})])
