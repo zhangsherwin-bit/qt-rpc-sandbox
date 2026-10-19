@@ -1,0 +1,44 @@
+name: QT Stage1 original intent netting public-order snapshots
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_intent_netting/**'
+      - '.github/workflows/stage1-intent-netting.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-intent-netting-once
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3
+      - name: Import, syntax and falsification tests (zero API calls)
+        run: python3 -m py_compile stage1_intent_netting/snapshot.py && python3 -m unittest discover -s stage1_intent_netting -p 'test_*.py' -v
+  public_screen:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3
+      - name: Scan four bounded public signed-order snapshots with no keys
+        run: PYTHONPATH=. python3 stage1_intent_netting/snapshot.py
+      - name: Preserve exact public responses and candidate examples
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-intent-netting-public-evidence
+          path: |
+            uniswapx_netting_evidence/
+            stage1_intent_netting/
+          retention-days: 14
