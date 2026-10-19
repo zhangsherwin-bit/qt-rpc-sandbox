@@ -2,17 +2,18 @@
 PUBLIC READ-ONLY ETH_CALL/ETH_GETLOGS/RECEIPTS. No signing or transactions.
 Frozen metadata-only selection and fixed disjoint block windows; quote ≠ profit.
 """
-import json, time, re, hashlib, urllib.request, urllib.error, traceback, sys
+import json, time, re, hashlib, urllib.request, urllib.error, traceback, sys, os
 from pathlib import Path
 from datetime import datetime, timezone
 from Crypto.Hash import keccak
+from qt_rpc.client import ReadOnlyRPC, WeightedLimiter, read_key_status
 
 OUT=Path("beefy_caller_evidence");OUT.mkdir(exist_ok=True)
 API="https://api.beefy.finance"
 CHAINS={
  "ethereum":{"rpc":"https://rpc-eth.blockmachine.io","id":1,
              "weth":"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"},
- "base":{"rpc":"https://mainnet.base.org","id":8453,
+ "base":{"rpc":"https://rpc-base.blockmachine.io","id":8453,
          "weth":"0x4200000000000000000000000000000000000006"}
 }
 ADDRESS=re.compile(r"^0x[a-fA-F0-9]{40}$")
@@ -67,15 +68,26 @@ def fetch_json(url,label,maxsize=15000000,post=None):
  if status!=200:raise RuntimeError(f"{host} HTTP {status}")
  if len(raw)>maxsize:raise RuntimeError("response exceeded fixed cap")
  return json.loads(raw)
+RPC_SESSIONS={}
+SHARED_STATUS=None
+SHARED_QUOTA=None
 def rpc(chain,method,params):
- if count[chain]>=MAX_RPCS_PER_CHAIN:raise RuntimeError("fixed RPC cap reached "+chain)
- count[chain]+=1
- n=count[chain]
- body=json.dumps({"jsonrpc":"2.0","id":n,"method":method,"params":params},sort_keys=True).encode()
- res=fetch_json(CHAINS[chain]["rpc"],f"RPC_{chain}_{n:03}",post=body,maxsize=1700000)
- if "error" in res:raise RuntimeError("JSON-RPC error: "+str(res["error"])[:240])
- if "result" not in res:raise RuntimeError("RPC result missing")
- return res["result"]
+ global SHARED_STATUS,SHARED_QUOTA
+ if SHARED_STATUS is None:
+  SHARED_STATUS=read_key_status(os.environ.get("BLOCKMACHINE_API_KEY","").strip())
+  ru=(SHARED_STATUS["rate_limit_rpm"] if SHARED_STATUS["auth"]=="authenticated" else 60)
+  SHARED_QUOTA=WeightedLimiter(cap_ru=max(5,int(ru*.55)))
+  rpt["rpc_auth_mode"]=SHARED_STATUS["auth"]
+  rpt["rpc_ru_limit_reported"]=SHARED_STATUS["rate_limit_rpm"]
+  rpt["rpc_ru_remaining_at_start"]=SHARED_STATUS["ru_remaining"]
+ if chain not in RPC_SESSIONS:
+  RPC_SESSIONS[chain]=ReadOnlyRPC(CHAINS[chain]["id"],OUT/"rpc_attempts"/chain,
+     limiter=SHARED_QUOTA,max_requests=85,status=SHARED_STATUS)
+ try:
+  return RPC_SESSIONS[chain].rpc(method,params)
+ finally:
+  count[chain]=RPC_SESSIONS[chain].attempted
+  save()
 def as_uint(h):
  if not isinstance(h,str) or not h.startswith("0x") or len(h)<3:raise ValueError("empty/invalid word")
  return int(h,16)
@@ -187,7 +199,7 @@ def evaluate(ch):
          "original_caller_cash_status":"PENDING_RECEIPT"})
   except Exception as e:w["status"]="UNRESOLVED";w["error"]=str(e)[:270]
   save()
-  if CHAINS[ch]["rpc"].split("/")[2] in blocked:break
+  if ch in RPC_SESSIONS and RPC_SESSIONS[ch].aborted:break
  rows=sorted(st["historical_cash"],key=lambda r:(r["block"],r["log_index"]))
  for event in rows[:8]:
   try:
