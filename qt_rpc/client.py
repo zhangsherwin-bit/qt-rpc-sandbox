@@ -87,24 +87,48 @@ def request_units(method, params):
 
 
 def read_key_status(key, opener=None):
-    """Read one optional bearer-authenticated status; do not expose prefix/key."""
+    """Validate key with the provider's read-only status API.
+
+    Use the standard requests HTTP client for the deployed client, reproducing
+    the previously successful 2026-10-11 transport fix. An explicitly injected
+    opener retains the deterministic urllib unit-test path. No retries,
+    redirects, logging of token/key_prefix, or key in the request URL.
+    """
     if not key:
         return {"auth": "keyless", "rate_limit_rpm": None,
                 "ru_remaining": None, "is_exhausted": None}
-    request = urllib.request.Request(
-        STATUS_URL, headers={"Authorization": "Bearer " + key,
-                             "Accept": "application/json"}, method="GET")
-    try:
-        op = opener or urllib.request.urlopen
-        with op(request, timeout=20) as f:
-            response = f.read(50000)
-            if f.status != 200:
-                raise RPCFailure("KEY_STATUS_HTTP_ERROR", status=f.status)
-        obj = json.loads(response)
-    except urllib.error.HTTPError as exc:
-        raise RPCFailure("KEY_STATUS_AUTH_OR_SERVICE_FAILURE", status=exc.code)
-    except (ValueError, OSError) as exc:
-        raise RPCFailure("KEY_STATUS_UNAVAILABLE", detail=type(exc).__name__)
+    headers = {"Authorization": "Bearer " + key, "Accept": "application/json"}
+    if opener is None:
+        try:
+            import requests
+            response = requests.get(STATUS_URL, headers=headers,
+                                    timeout=(10, 20), allow_redirects=False)
+            if response.status_code != 200:
+                raise RPCFailure("KEY_STATUS_AUTH_OR_SERVICE_FAILURE",
+                                 status=response.status_code)
+            obj = response.json()
+        except requests.RequestException as exc:
+            raise RPCFailure("KEY_STATUS_UNAVAILABLE",
+                             detail=type(exc).__name__) from None
+        except (ValueError, TypeError) as exc:
+            raise RPCFailure("KEY_STATUS_UNAVAILABLE",
+                             detail=type(exc).__name__) from None
+    else:
+        request = urllib.request.Request(
+            STATUS_URL, headers=headers, method="GET")
+        try:
+            with opener(request, timeout=20) as response:
+                raw = response.read(50000)
+                if response.status != 200:
+                    raise RPCFailure("KEY_STATUS_HTTP_ERROR",
+                                     status=response.status)
+            obj = json.loads(raw)
+        except urllib.error.HTTPError as exc:
+            raise RPCFailure("KEY_STATUS_AUTH_OR_SERVICE_FAILURE",
+                             status=exc.code) from None
+        except (ValueError, OSError) as exc:
+            raise RPCFailure("KEY_STATUS_UNAVAILABLE",
+                             detail=type(exc).__name__) from None
     if not isinstance(obj, dict) or obj.get("status") != "active":
         raise RPCFailure("KEY_NOT_ACTIVE_OR_STATUS_INVALID")
     fields = ("rate_limit_rpm", "ru_remaining", "ru_budget", "is_exhausted")
@@ -115,7 +139,6 @@ def read_key_status(key, opener=None):
     if not isinstance(obj.get("rate_limit_rpm"), (int, float)):
         raise RPCFailure("MISSING_AUTHENTICATED_RU_RATE")
     return report
-
 
 def parse_retry_seconds(headers, error, now_unix=None):
     now_unix = now_unix if now_unix is not None else time.time()
@@ -155,7 +178,7 @@ class AuthenticatedBudget:
     or crossing the RU reserve measured at the key-status snapshot.
     Other account consumers can change actual remaining RU independently.
     """
-    def __init__(self, status, reserve_floor=900, max_run_ru=50,
+    def __init__(self, status, reserve_floor=1500, max_run_ru=500,
                  approved=None):
         if status.get("auth") != "authenticated":
             raise RPCFailure("AUTHENTICATED_STATUS_REQUIRED")
@@ -211,7 +234,7 @@ class ReadOnlyRPC:
         self.limiter = limiter or WeightedLimiter(cap_ru=cap, sleeper=sleeper)
         self.max_attempts = max(1, min(4, max_attempts))
         self.max_requests = max_requests
-        self.opener = opener or urllib.request.urlopen
+        self.opener = opener  # explicit opener is reserved for offline unit mocks
         self.sleep = sleeper or time.sleep
         self.now_unix = now_unix or time.time
         self.archive = Path(archive_dir)
@@ -263,17 +286,41 @@ class ReadOnlyRPC:
             raw = b""
             resp_headers = {}
             try:
-                req = urllib.request.Request(
-                    self.endpoint, data=request_body, headers=headers, method="POST")
-                with self.opener(req, timeout=35) as response:
-                    status = response.status
-                    raw = response.read(2500000)
-                    resp_headers = response.headers
+                if self.opener is None:
+                    # Standard HTTP transport matches the prior successful
+                    # public/keyed RPC and status diagnostics. Never retry 403.
+                    import requests
+                    with requests.post(
+                        self.endpoint, data=request_body, headers=headers,
+                        timeout=(10, 35), allow_redirects=False, stream=True
+                    ) as response:
+                        status = response.status_code
+                        resp_headers = response.headers
+                        chunks, total = [], 0
+                        for chunk in response.iter_content(chunk_size=65536):
+                            if chunk:
+                                chunks.append(chunk)
+                                total += len(chunk)
+                                if total > 2500000:
+                                    break
+                        raw = b"".join(chunks)
+                else:
+                    req = urllib.request.Request(
+                        self.endpoint, data=request_body, headers=headers,
+                        method="POST")
+                    with self.opener(req, timeout=35) as response:
+                        status = response.status
+                        raw = response.read(2500000)
+                        resp_headers = response.headers
             except urllib.error.HTTPError as exc:
                 status = exc.code
                 raw = exc.read(2500000)
                 resp_headers = exc.headers
             except (OSError, TimeoutError) as exc:
+                raw = json.dumps({"transport_error": type(exc).__name__}).encode()
+            except Exception as exc:
+                # No exception message in output: some transports embed URLs.
+                # Do not retry or redirect a denied endpoint.
                 raw = json.dumps({"transport_error": type(exc).__name__}).encode()
             try:
                 result = json.loads(raw)
