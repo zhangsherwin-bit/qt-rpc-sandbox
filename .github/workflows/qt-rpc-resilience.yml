@@ -21,6 +21,7 @@ jobs:
       - name: Compile read-only source
         run: python3 -m py_compile qt_rpc/client.py
       - name: Sanitize and verify Blockmachine quota status (optional secret)
+        continue-on-error: true
         env:
           BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
         run: PYTHONPATH=. python3 qt_rpc/status_check.py
