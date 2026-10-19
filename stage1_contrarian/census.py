@@ -185,7 +185,7 @@ def inspect_settlement(ch,event,disputes):
 def settle_chain(ch):
  label="ethereum" if ch==1 else "base"
  entry={"windows":[],"events":[],"by_type":{},"receipts":[],"complete":False}
- RPT["chains"][label]={"uma":entry}
+ RPT["chains"].setdefault(label,{})["uma"]=entry
  if hexuint(read(ch,"eth_chainId",[]))!=ch:raise ValueError("wrong chain")
  head=hexuint(read(ch,"eth_blockNumber",[]))-8
  pin=header(ch,head)
@@ -275,6 +275,7 @@ def convex_run():
                     x["topics"][0].lower()==TRANSFER])})
    direct=target==CONVEX_BOOSTER and row["tx_selector"]==EARMARK_SELECTOR and paid>0
    row["source_direct_earmark_sender_cash"]=direct
+   row["booster_crv_transferred_to_tx_sender"]=paid>0
    if direct:
     try:
      weth=quoter(ch,paid,trans["block"]-1)
@@ -282,7 +283,9 @@ def convex_run():
      row["conditional_net_WETH_wei_after_170k_swap_gas"]=weth-row["receipt"]["reported_total_fee_wei"]-INCREMENTAL_SWAP_GAS*hexuint(rec["effectiveGasPrice"])
      row["quote_is_counterfactual_not_onchain_swap"]=True
     except Exception as ex:row["quote_error"]=type(ex).__name__
-   row["status"]="DIRECT_SENDER_REWARD_CONFIRMED" if direct else "PAYOUT_TO_INTERMEDIATE_OR_OTHER_ACTOR"
+   row["status"]=("DIRECT_EARMARK_SENDER_REWARD" if direct
+                 else "BOOSTER_REWARD_TO_TX_SENDER_NOT_DIRECT_CALL" if paid>0
+                 else "NO_BOOSTER_REWARD_TO_TX_SENDER")
   except Exception as ex:row["error_type"]=type(ex).__name__
   save()
  # Batch temporal necessity: distinct transactions in <=6 consecutive blocks.
@@ -317,4 +320,7 @@ def main():
   "rpc_calls":RPT["rpc_calls"],"convex_txs":RPT["chains"].get("ethereum",{}).get("convex",{}).get("distinct_txs"),
   "uma_disputed_settlements":{ch:v.get("uma",{}).get("disputed_settlements") for ch,v in RPT["chains"].items()},
   "errors":RPT["errors"],"no_trades":True},sort_keys=True))
-if __name__=="__main__":main()
+ return bool(RPT["complete"])
+if __name__=="__main__":
+ import sys
+ sys.exit(0 if main() else 2)
