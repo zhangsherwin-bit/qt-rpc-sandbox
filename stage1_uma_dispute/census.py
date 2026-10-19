@@ -134,6 +134,7 @@ def main():
  save()
  seen={}
  counts={}
+ provider_denied=False
  for chain,url in CHAINS.items():
   result={"chain":chain,"cohorts":[],"observations":[],"state":"UNRESOLVED"}
   RPT["network_results"][chain]=result
@@ -155,7 +156,9 @@ def main():
     entry["status"]="UNRESOLVED";entry["error_kind"]=str(exc)[:90]
     RPT["errors"].append({"chain":chain,"cohort":cohort["name"],
                           "reason":entry["error_kind"]})
-    if "provider_denial" in str(exc):break
+    if "provider_denial" in str(exc):
+     provider_denied=True
+     break
    save()
   result["state"]="ALL_COHORTS_OK" if len(result["cohorts"])==len(COHORTS) and all(x["status"]=="OK" for x in result["cohorts"]) else "UNRESOLVED"
   seen_result=result["observations"]
@@ -177,6 +180,13 @@ def main():
    "gross_values_not_net_return_and_not_your_pnl":True,
    "future_capture_rate_not_measured":True}
   save()
+  if provider_denied:
+   # All four chains share the same public GraphQL service; a first 429
+   # is a provider-wide stop, not grounds for trying three more endpoints.
+   break
+ if provider_denied:
+  RPT["shared_provider_denial_stop"]=True
+  RPT["unqueried_networks"]=[n for n in CHAINS if n not in RPT["network_results"]]
  RPT["complete"]=len(RPT["network_results"])==len(CHAINS) and all(
   v["state"]=="ALL_COHORTS_OK" for v in RPT["network_results"].values())
  RPT["summary"]={
