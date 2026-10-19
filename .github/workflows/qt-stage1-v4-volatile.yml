@@ -1,0 +1,42 @@
+name: QT Stage1 VolatilePair fee-shock cash against v3
+'on':
+  pull_request:
+    types: [opened]
+    paths:
+      - 'stage1_v4_volatile/**'
+      - '.github/workflows/qt-stage1-v4-volatile.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-global-blockmachine-reads
+  cancel-in-progress: false
+jobs:
+  empirical:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'research/stage1-v4-volatile-backrun-20261019' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned audited dependencies
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Compile and offline audit
+        run: |
+          python3 -m py_compile qt_rpc/client.py stage1_v4_volatile/probe.py
+          python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v
+      - name: Strict <=250 RU original-account-permitted read-only historical tranche
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
+          QT_ALLOW_AUTHENTICATED_RPC: 'YES'
+          QT_PROVIDER_ACCOUNT_RIGHTS_CONFIRMED: 'YES'
+        run: PYTHONPATH=. python3 stage1_v4_volatile/probe.py
+      - name: Preserve original RPC requests, responses and audit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-v4-volatile-backrun-cash
+          path: |
+            volatilepair_evidence/
+            stage1_v4_volatile/
+          retention-days: 14
