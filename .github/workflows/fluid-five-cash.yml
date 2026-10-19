@@ -1,0 +1,38 @@
+name: QT Stage 1 five real Fluid liquidation cash-conversion checks
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'fluid_five/**'
+      - '.github/workflows/fluid-five-cash.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-fluid-five-conditional-cash
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline frozen-event and precise-unit checks
+        run: |
+          python3 -m unittest discover -s fluid_stage1 -p 'test_*.py' -v
+          python3 -m unittest discover -s fluid_events -p 'test_*.py' -v
+          python3 -m unittest discover -s fluid_five -p 'test_*.py' -v
+      - name: Confirm actual winner receipts and same-block conditional cash exits
+        run: python3 fluid_five/replay.py
+      - name: Archive original reads, missing data and failure states
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-fluid-five-conditional-cash
+          path: |
+            fluid_five_evidence/
+            fluid_five/
+          retention-days: 14
