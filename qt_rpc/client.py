@@ -145,10 +145,52 @@ def parse_retry_seconds(headers, error, now_unix=None):
     return max(vals) if vals else None
 
 
+
+class AuthenticatedBudget:
+    """Fail-closed billing-period spending guard.
+
+    An authenticated API key is *not* permission to spend its RU balance.
+    A separate QT_ALLOW_AUTHENTICATED_RPC=YES opt-in is required. After opt-in,
+    this object prevents the process from spending over a small per-run cap
+    or crossing the RU reserve measured at the key-status snapshot.
+    Other account consumers can change actual remaining RU independently.
+    """
+    def __init__(self, status, reserve_floor=900, max_run_ru=50,
+                 approved=None):
+        if status.get("auth") != "authenticated":
+            raise RPCFailure("AUTHENTICATED_STATUS_REQUIRED")
+        if approved is None:
+            approved = os.environ.get("QT_ALLOW_AUTHENTICATED_RPC", "") == "YES"
+        if not approved:
+            raise RPCFailure("AUTHENTICATED_RU_SPENDING_NOT_APPROVED")
+        remaining = status.get("ru_remaining")
+        if isinstance(remaining, bool) or not isinstance(remaining, (int, float)):
+            raise RPCFailure("AUTHENTICATED_REMAINING_RU_UNAVAILABLE")
+        if not isinstance(reserve_floor, (int, float)) or reserve_floor < 0:
+            raise ValueError("Reserve floor must be non-negative")
+        if not isinstance(max_run_ru, (int, float)) or max_run_ru <= 0:
+            raise ValueError("Max run RU must be positive")
+        self.reserve_floor = float(reserve_floor)
+        self.initial_remaining = float(remaining)
+        self.cap_ru = min(float(max_run_ru),
+                          max(0.0, self.initial_remaining - self.reserve_floor))
+        self.attempted_ru = 0.0
+        if self.cap_ru < 1:
+            raise RPCFailure("MONTHLY_RU_RESERVE_PROTECTED")
+
+    def admit(self, weight):
+        if self.attempted_ru + weight > self.cap_ru + 1e-8:
+            raise RPCFailure("AUTHENTICATED_RUN_RU_CAP_REACHED",
+                             detail="No additional paid-RU call issued")
+        # Conservatively count *attempts*, including denied/retried calls.
+        self.attempted_ru += weight
+
+
+
 class ReadOnlyRPC:
     def __init__(self, chain_id, archive_dir, limiter=None, api_key=None,
                  max_attempts=3, max_requests=125, opener=None,
-                 sleeper=None, now_unix=None, status=None):
+                 sleeper=None, now_unix=None, status=None, budget=None):
         if chain_id not in ENDPOINTS:
             raise ValueError("Unsupported chain")
         self.chain_id = chain_id
@@ -157,6 +199,11 @@ class ReadOnlyRPC:
         self.status = status if status is not None else read_key_status(self.key, opener=opener)
         if self.key and self.status.get("auth") != "authenticated":
             raise RPCFailure("KEY_STATUS_REQUIRED", detail="Refusing silent free-tier fallback")
+        self.budget = None
+        if self.key:
+            self.budget = budget if budget is not None else AuthenticatedBudget(
+                self.status)
+
         limit = self.status.get("rate_limit_rpm") if self.key else 60
         # Leave capacity for other users of this global account/key/IP.
         cap = int(float(limit) * 0.55) if limit else 30
@@ -208,6 +255,8 @@ class ReadOnlyRPC:
         for attempt in range(1, self.max_attempts + 1):
             if self.attempted >= self.max_requests:
                 raise RPCFailure("FIXED_HTTP_ATTEMPT_LIMIT")
+            if self.budget is not None:
+                self.budget.admit(units)
             self.limiter.admit(units)
             self.attempted += 1
             status = -1
