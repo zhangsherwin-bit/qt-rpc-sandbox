@@ -241,7 +241,7 @@ def convex_run():
   entry["windows"].append(w)
   try:
    logs=read(ch,"eth_getLogs",[{"address":CRV,
-         "topics":[TRANSFER,word(int(CONVEX_BOOSTER,16)) and "0x"+addrword(CONVEX_BOOSTER)],
+         "topics":[TRANSFER,"0x"+addrword(CONVEX_BOOSTER)],
          "fromBlock":hex(win["start"]),"toBlock":hex(win["end"])}])
    w["count"]=len(logs);w["status"]="OK"
    for log in logs:all_logs.append(parse_crv_transfer(log))
