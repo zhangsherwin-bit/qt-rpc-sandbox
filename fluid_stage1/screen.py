@@ -34,7 +34,7 @@ def request(chain,method,params,label):
  global COUNT
  if chain in DENIED:raise RuntimeError("Stop after access denial")
  if COUNT>=LIMIT or time.monotonic()-START>1200:raise RuntimeError("Fixed request/time budget")
- if method not in ("eth_chainId","eth_blockNumber","eth_getBlockByNumber","eth_getCode","eth_call"):raise ValueError("Read methods only")
+ if method not in ("eth_chainId","eth_blockNumber","eth_getBlockByNumber","eth_getCode","eth_call","eth_getLogs","eth_getTransactionReceipt"):raise ValueError("Read methods only")
  COUNT+=1;time.sleep(1.25);raw=b"";entry={"name":label,"chain":chain,"method":method,"id":COUNT}
  try:
   body=json.dumps({"jsonrpc":"2.0","id":COUNT,"method":method,"params":params}).encode()
