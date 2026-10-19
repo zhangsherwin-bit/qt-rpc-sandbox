@@ -1,32 +1,63 @@
-name: QT Stage 1 frxUSD Curve issuer-redemption finite real quotes
+name: QT Stage1 Frax cash route — offline CI + manually gated empirical audit
 'on':
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'stage1_frx_curve/**'
+      - 'qt_rpc/**'
       - '.github/workflows/frx-curve-primary-secondary.yml'
   workflow_dispatch:
+    inputs:
+      run_empirical:
+        description: 'Run bounded, read-only historical data collection (default NO)'
+        type: boolean
+        required: true
+        default: false
+      use_authenticated_rpc:
+        description: 'Use account request units; default is keyless public read-only'
+        type: boolean
+        required: true
+        default: false
+      account_usage_permitted:
+        description: 'Confirm provider-authorised account use before spending authenticated RU'
+        type: boolean
+        required: true
+        default: false
 permissions:
   contents: read
 concurrency:
   group: qt-stage1-global-blockmachine-reads
   cancel-in-progress: false
 jobs:
-  probe:
+  offline:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - run: python3 -m pip install pycryptodome==3.23.0
-      - name: Syntax check
-        run: python3 -m py_compile qt_rpc/client.py stage1_frx_curve/probe.py
-      - name: Bounded same-chain read-only real Curve and custodian quote test
+      - name: Pin audited Python dependencies
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Compile research scripts, no network RPC
+        run: python3 -m py_compile qt_rpc/client.py qt_rpc/status_check.py stage1_frx_curve/probe.py
+      - name: Offline quota and transport regression tests
+        run: python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v
+  route:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_empirical == true && (!inputs.use_authenticated_rpc || inputs.account_usage_permitted == true) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned audited dependencies
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Execute bounded read-only research after manual gate
         env:
-          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
+          BLOCKMACHINE_API_KEY: ${{ inputs.use_authenticated_rpc && inputs.account_usage_permitted && secrets.BLOCKMACHINE_API_KEY || '' }}
+          QT_ALLOW_AUTHENTICATED_RPC: ${{ inputs.use_authenticated_rpc && inputs.account_usage_permitted && 'YES' || '' }}
         run: PYTHONPATH=. python3 stage1_frx_curve/probe.py
-      - name: Archive raw requests, responses, failure and SHA evidence
+      - name: Preserve request-response evidence, including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -34,4 +65,5 @@ jobs:
           path: |
             frx_curve_evidence/
             stage1_frx_curve/
+            qt_rpc/
           retention-days: 14
