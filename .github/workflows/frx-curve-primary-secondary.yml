@@ -9,20 +9,22 @@ name: QT Stage 1 frxUSD Curve issuer-redemption finite real quotes
 permissions:
   contents: read
 concurrency:
-  group: qt-stage1-frx-curve-cash
+  group: qt-stage1-global-blockmachine-reads
   cancel-in-progress: false
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
       - run: python3 -m pip install pycryptodome==3.23.0
       - name: Syntax check
-        run: python3 -m py_compile stage1_frx_curve/probe.py
+        run: python3 -m py_compile qt_rpc/client.py stage1_frx_curve/probe.py
       - name: Bounded same-chain read-only real Curve and custodian quote test
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
         run: python3 stage1_frx_curve/probe.py
       - name: Archive raw requests, responses, failure and SHA evidence
         if: always()
