@@ -1,0 +1,44 @@
+name: QT Stage1 GHO GSM historical allowance root cause
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'gho_allowance/**'
+      - 'gho_cash/GhoCashProbe.sol'
+      - '.github/workflows/gho-allowance-root-cause.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-gho-heavy-rpc
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install py-solc-x==2.0.5 pycryptodome==3.23.0
+      - name: Offline GHO canonical cash tests
+        run: |
+          python3 -m unittest discover -s gho_cash -p 'test_*.py' -v
+          python3 -m unittest discover -s gho_allowance -p 'test_*.py' -v
+      - name: Preapprove real USDC and diagnose original GHO GSM reverted flash transaction
+        run: python3 gho_allowance/diagnose.py
+      - name: Archive raw simulations even if EVM transaction fails
+        if: always()
+        run: |
+          mkdir -p gho_allowance_evidence/source
+          cp gho_allowance/*.py gho_allowance_evidence/source/
+          cp gho_cash/*.sol gho_allowance_evidence/source/
+          cp .github/workflows/gho-allowance-root-cause.yml gho_allowance_evidence/source/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: qt-gho-gsm-allowance-root-cause
+          path: |
+            gho_allowance_evidence/
+            gho_cash_evidence/
+          retention-days: 14

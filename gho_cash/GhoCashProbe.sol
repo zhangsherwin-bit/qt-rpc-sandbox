@@ -8,6 +8,9 @@ interface IERC20 {
     function approve(address spender,uint256 amount) external returns(bool);
     function transfer(address to,uint256 amount) external returns(bool);
 }
+interface IERC20Allowance {
+    function allowance(address owner,address spender) external view returns(uint256);
+}
 interface IMorpho {
     function flashLoan(address token,uint256 assets,bytes calldata data) external;
 }
@@ -65,5 +68,20 @@ contract GhoCashProbe {
         require(IERC20(GHO).balanceOf(address(this))==0,"DUST_GHO");
         require(IERC20(USDC).balanceOf(address(this))>assets,"NO_CASH_EDGE");
         require(IERC20(USDC).approve(MORPHO,assets),"APPROVE_REPAY_FAILED");
+    }
+
+    // Diagnostic only: no initial token principal, no transfers, and no changes
+    // to production state outside canonical historical eth_simulateV1.
+    function prepareAllowance(uint256 amount) external returns(uint256 checked) {
+        require(msg.sender==BENEFICIARY,"ONLY_TEST_BENEFICIARY");
+        require(IERC20(USDC).balanceOf(address(this))==0,"PRINCIPAL_WAS_INSERTED");
+        require(IERC20(GHO).balanceOf(address(this))==0,"GHO_WAS_INSERTED");
+        require(IERC20(USDC).approve(GSM,amount),"PREAPPROVE_FAILED");
+        checked=IERC20Allowance(USDC).allowance(address(this),GSM);
+        require(checked==amount,"ALLOWANCE_MISMATCH");
+    }
+    function approvalState() external view returns(uint256 usdcToGsm,uint256 ghoToRouter) {
+        usdcToGsm=IERC20Allowance(USDC).allowance(address(this),GSM);
+        ghoToRouter=IERC20Allowance(GHO).allowance(address(this),ROUTER);
     }
 }
