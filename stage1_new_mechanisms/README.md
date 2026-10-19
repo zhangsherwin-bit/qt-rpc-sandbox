@@ -1,0 +1,11 @@
+# QT Programme III: Independent mechanisms tranche, 2026-10-19
+
+User authorised account use and bounded read-only Stage 1 research. Official Curve contracts: https://docs.curve.finance/developer/deployments/integration ; UniswapX permissionless filler documentation: https://developers.uniswap.org/docs/liquidity/uniswapx/filling/overview .
+
+**Hypothesis 1 - Curve PegKeeperV2.** Public update(beneficiary) can award LP tokens from peg stabilisation. Different underlying economic source from liquidation and Beefy yield harvesting. Four official Ethereum keepers; four time-separated states at offsets [0,50000,180000,500000] and five disjoint 950-block event windows at offsets [500,75000,200000,500000,900000], selected *before* reading outcomes. One OR-topic, address-list getLogs query per window. Collect estimate_caller_profit(), pool(), caller_share(), debt(), last_change(), plus read-only simulated update(address) for positive rewards. For the USDC pool only, ask exact same-block pool to price LP withdrawal into USDC. Quote does not verify cash settlement, profit after gas, or outside capture. Twelve earliest distinct event tx receipts checked if present.
+
+**Hypothesis 2 - UniswapX.** Open permissionless filler phase after exclusivity. At most two public, unauthenticated GET reads to the official orders API (Ethereum DutchV2, Base DutchV3); no quote requests or order execution. A feed observation proves nothing about gas-adjusted fill surplus until order and finite liquidity are decoded.
+
+**Budget:** One-off PR-open GitHub Actions run only, no PR synchronize repeats, account eligibility user-confirmed. GitHub Actions secret is never logged. A shared strict AuthenticatedBudget approved for this run, reserve 1500 RU and cap 280 RU, plus 55% conservative per-minute budget. Read-only eth RPC methods only; first the four-call historical archive smoke (2 chains). If blocked, no further authenticated data reads. No trading or wallet use. Exact request-response SHA archived. No main-branch changes.
+
+**Evidence discipline:** Gross quote != terminal cash, third-party fee event != our profit, timing opportunity != independent competitiveness, failure or provider denial != negative economics. Stage 1 discovery stays open; Stage 2 remains shadow-only for independently cash-proven candidates.
