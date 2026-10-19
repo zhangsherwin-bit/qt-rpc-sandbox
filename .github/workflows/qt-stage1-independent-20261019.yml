@@ -1,0 +1,43 @@
+name: QT Stage 1 independent Curve and UniswapX empirical tranche
+'on':
+  pull_request:
+    types: [opened]
+    paths:
+      - 'stage1_new_mechanisms/**'
+      - '.github/workflows/qt-stage1-independent-20261019.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-global-blockmachine-reads
+  cancel-in-progress: false
+jobs:
+  empirical:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'research/stage1-pegkeeper-intent-independent-20261019' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pinned requests and Keccak
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Syntax and offline RPC safety tests before any external reads
+        run: |
+          python3 -m py_compile qt_rpc/client.py stage1_new_mechanisms/empirical.py
+          python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v
+      - name: Predeclared read-only empirical tranche with shared max 280 RU
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
+          QT_ALLOW_AUTHENTICATED_RPC: 'YES'
+          QT_PROVIDER_ACCOUNT_RIGHTS_CONFIRMED: 'YES'
+        run: PYTHONPATH=. python3 stage1_new_mechanisms/empirical.py
+      - name: Preserve original observations and all error evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-independent-pegkeepers-uniswapx
+          path: |
+            stage1_independent_evidence/
+            stage1_new_mechanisms/
+            qt_rpc/RESEARCH_BUDGET_20261019.md
+          retention-days: 14
