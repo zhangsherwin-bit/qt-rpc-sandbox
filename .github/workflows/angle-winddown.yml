@@ -1,0 +1,32 @@
+name: QT Stage1 Angle USDA winddown cash acquisition check
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'angle_winddown/**'
+      - '.github/workflows/angle-winddown.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Offline amount, endpoint and no-trading checks
+        run: python3 -m unittest discover -s angle_winddown -p 'test_*.py' -v
+      - name: Compare actual onchain USDA redemption to public Odos acquiring USDA
+        run: python3 angle_winddown/screen.py
+      - name: Preserve source, all failures, and original observations
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-angle-winddown-discount-cash
+          path: |
+            winddown_evidence/
+            angle_winddown/
+          retention-days: 14
