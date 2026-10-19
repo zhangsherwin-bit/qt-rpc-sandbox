@@ -1,0 +1,35 @@
+name: QT Stage 1 Gearbox expiration economic source census
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'gearbox_expiry/**'
+      - '.github/workflows/gearbox-expiry.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-gearbox-expiry-research
+  cancel-in-progress: false
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install pycryptodome==3.23.0
+      - name: Prove frozen calendar, ABI, and read-only code
+        run: python3 -m unittest discover -s gearbox_expiry -p 'test_*.py' -v
+      - name: Bounded historical expiration liquidation source census
+        run: python3 gearbox_expiry/scan.py
+      - name: Preserve ALL evidence and failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-gearbox-expiration-evidence
+          path: |
+            gearbox_expiry_evidence/
+            gearbox_expiry/
+          retention-days: 14
