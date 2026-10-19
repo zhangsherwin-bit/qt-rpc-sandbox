@@ -23,4 +23,4 @@ jobs:
       - name: Sanitize and verify Blockmachine quota status (optional secret)
         env:
           BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
-        run: python3 qt_rpc/status_check.py
+        run: PYTHONPATH=. python3 qt_rpc/status_check.py
