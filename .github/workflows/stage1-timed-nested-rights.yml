@@ -1,0 +1,48 @@
+name: QT Stage1 Sablier payment options and ERC6551 NFT-owned account presence
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_nested_receivables/**'
+      - '.github/workflows/stage1-timed-nested-rights.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-keyless-timed-nested-once-20261020
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned audited libraries
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Exact ABI and no-network account rights checks
+        run: python3 -m py_compile qt_rpc/client.py stage1_nested_receivables/scan.py && python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v && python3 -m unittest discover -s stage1_nested_receivables -p 'test_*.py' -v
+  keyless:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Bounded public RPC rights activity screen, zero account RU
+        env:
+          BLOCKMACHINE_API_KEY: ''
+          QT_ALLOW_AUTHENTICATED_RPC: ''
+        run: PYTHONPATH=. python3 stage1_nested_receivables/scan.py
+      - name: Save raw request-response SHA and incomplete-source evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-keyless-sablier-tba-rights
+          path: |
+            stage1_timed_nested_rights/
+            stage1_nested_receivables/
+          retention-days: 14
