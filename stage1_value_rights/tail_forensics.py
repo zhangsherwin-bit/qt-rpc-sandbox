@@ -20,6 +20,7 @@ TOKEN="0xd533a949740bb3306d119cc777fa900ba034cd52"
 BOOSTER="0xf403c135812408bfbe8713b5a23a04b3d48aae31"
 WETH="0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 TRANSFER="0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+WETH_WITHDRAWAL="0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65"
 OUT=Path("stage1_rights_tail_evidence")
 MAX_RU=115
 FLOOR=1500
@@ -34,8 +35,12 @@ def token_flows(rec,parties):
  out=defaultdict(lambda:defaultdict(int))
  for log in rec.get("logs",[]):
   topics=log.get("topics",[])
-  if len(topics)!=3 or str(topics[0]).lower()!=TRANSFER:continue
   token=log.get("address","").lower()
+  if token==WETH and len(topics)==2 and str(topics[0]).lower()==WETH_WITHDRAWAL:
+   owner=adr(topics[1])
+   if owner in parties:out[owner][WETH]-=n(log["data"])
+   continue
+  if len(topics)!=3 or str(topics[0]).lower()!=TRANSFER:continue
   if token not in (TOKEN,WETH):continue
   a=adr(topics[1]);b=adr(topics[2]);q=n(log["data"])
   if a in parties:out[a][token]-=q
