@@ -1,0 +1,30 @@
+name: QT Stage1 safe Blockmachine RPC unit tests
+'on':
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'qt_rpc/**'
+      - '.github/workflows/qt-rpc-resilience.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install standard documented HTTP client
+        run: python3 -m pip install requests==2.32.3
+      - name: Offline tests without credentials
+        run: python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v
+      - name: Compile read-only source
+        run: python3 -m py_compile qt_rpc/client.py
+      - name: Sanitize and verify Blockmachine quota status (manual request only)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
+        run: PYTHONPATH=. python3 qt_rpc/status_check.py
