@@ -19,7 +19,7 @@ ALLOWED_METHODS = frozenset({
     "eth_chainId", "eth_blockNumber", "eth_getBlockByNumber",
     "eth_getCode", "eth_call", "eth_getLogs", "eth_estimateGas",
     "eth_getTransactionByHash", "eth_getTransactionReceipt",
-    "eth_getBalance", "eth_getStorageAt",
+    "eth_getBalance", "eth_getStorageAt", "debug_traceTransaction",
 })
 ENDPOINTS = {
     1: "https://rpc-eth.blockmachine.io",
@@ -67,6 +67,8 @@ def request_units(method, params):
     """
     if method not in ALLOWED_METHODS:
         raise RPCFailure("METHOD_NOT_READ_ONLY_OR_UNSUPPORTED", detail=method)
+    if method == "debug_traceTransaction":
+        return 25  # documented extra-cost, read-only geth-style callTracer
     if method != "eth_getLogs":
         return 1
     if not params or not isinstance(params[0], dict):
