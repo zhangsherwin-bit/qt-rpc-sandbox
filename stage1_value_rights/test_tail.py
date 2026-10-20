@@ -1,6 +1,6 @@
 import unittest
 from stage1_value_rights.tail_forensics import (
- TARGETS,CRV,BOOSTER,WETH,TRANSFER,count_frozen_reward,
+ TARGETS,TOKEN as CRV,BOOSTER,WETH,TRANSFER,count_frozen_reward,
  native_transfers,token_flows,MAX_RU,FLOOR)
 from qt_rpc.client import request_units
 def taddr(a):return "0x"+a[2:].rjust(64,"0")
