@@ -24,7 +24,7 @@ jobs:
         run: python3 -m py_compile qt_rpc/client.py stage1_convex_forensic/receipt.py && python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v && python3 -m unittest discover -s stage1_convex_forensic -p 'test_*.py' -v
   empirical:
     needs: offline
-    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ false }} # forensic read-only historical job already attempted; never duplicate 14-RU work
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
