@@ -1,6 +1,6 @@
 import unittest
 from stage1_value_rights.tail_forensics import (
- TARGETS,TOKEN as CRV,BOOSTER,WETH,TRANSFER,count_frozen_reward,
+ TARGETS,TOKEN as CRV,BOOSTER,WETH,TRANSFER,WETH_WITHDRAWAL,count_frozen_reward,
  native_transfers,token_flows,MAX_RU,FLOOR)
 from qt_rpc.client import request_units
 def taddr(a):return "0x"+a[2:].rjust(64,"0")
@@ -22,6 +22,15 @@ class TestTypedRightsTail(unittest.TestCase):
   self.assertEqual(count_frozen_reward(rc,addr),r)
   self.assertEqual(token_flows(rc,{addr})[addr].get(CRV),None)
   self.assertEqual(token_flows(rc,{addr})[addr][WETH],"234")
+ def test_weth_unwrap_consumes_weth_transfer_inventory(self):
+  addr=TARGETS[0]["recipient"];pool="0x"+"aa"*20
+  amount=51792155742713661
+  rec={"logs":[transfer(WETH,pool,addr,amount),
+     {"address":WETH,"topics":[WETH_WITHDRAWAL,taddr(addr)],"data":hex(amount)}]}
+  # Before: ERC20 Transfer-only scan falsely suggested the beneficiary
+  # retained both WETH and unwrapped ETH. In fact WETH was burned.
+  self.assertNotIn(WETH,token_flows(rec,{addr}).get(addr,{}))
+
  def test_no_reward_without_correct_beneficiary(self):
   other="0x"+"aa"*20
   rc={"logs":[transfer(CRV,BOOSTER,other,TARGETS[0]["crv_wei"])]}
