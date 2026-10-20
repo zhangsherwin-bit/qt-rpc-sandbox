@@ -214,7 +214,10 @@ def chain_run(ch):
   except Exception as exc:row["error_type"]=type(exc).__name__
   save()
  item["anchor_recheck"]=pin(ch,head)["hash"]==state["hash"]
- item["complete"]=item["anchor_recheck"] and all(x["state"]=="OK" for x in item["windows"])
+ item["complete"]=(item["anchor_recheck"]
+   and all(x["state"]=="OK" for x in item["windows"])
+   and all(x["status"] in ("CASH_TOKEN_WITHDRAWAL_CONFIRMED","NO_TERMINAL_TRANSFER_MATCH") for x in item["cash_receipts"])
+   and all(x["state"]=="HISTORIC_PREDECESSOR_QUOTES" for x in item["fee_slope_quotes"]))
  save()
 def main():
  save()
@@ -234,4 +237,6 @@ def main():
   "calls":REPORT["rpc_calls"],"counts":{c:{"claims":v.get("claim_count"),"withdrawals":v.get("withdraw_count"),
    "confirmed_withdrawal_receipts":sum(z.get("status")=="CASH_TOKEN_WITHDRAWAL_CONFIRMED" for z in v["cash_receipts"])}
    for c,v in REPORT["chain_results"].items()},"errors":REPORT["errors"]},sort_keys=True))
-if __name__=="__main__":main()
+ return bool(REPORT["complete"])
+if __name__=="__main__":
+ raise SystemExit(0 if main() else 2)
