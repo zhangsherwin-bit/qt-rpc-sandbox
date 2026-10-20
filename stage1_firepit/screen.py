@@ -26,7 +26,7 @@ ASSETS={
  "UNI":UNI,
  "WBTC":"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
  "V2_USDC_WETH":"0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc",
- "V2_USDT_WETH":"0x0d4a11d5eeaac28e3f61d100daF4d40471f1852",
+ "V2_USDT_WETH":"0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852",
  "V2_DAI_WETH":"0xa478c2975ab1ea89e8196811f51a7b7ade33eb11",
  "V2_USDC_USDT":"0x3041cbd36888becc7bbcBc0045e3b1f144466f5f"
 }
@@ -71,7 +71,7 @@ def decode_released(e):
  count=int(words[offset],16)
  if count>20 or offset+1+count>len(words):raise ValueError("Malformed asset list")
  assets=["0x"+words[offset+1+i][-40:].lower() for i in range(count)]
- if len(assets)!=len(set(assets)):raise ValueError("Duplicate release asset entries")
+ # The onchain releaser permits repeated addresses; don't invent a rejection.
  return {"tx":e["transactionHash"],"block":n(e["blockNumber"]),
          "log_index":n(e["logIndex"]),"nonce":n(t[1]),
          "recipient":address_word(t[2]),"assets":assets,
