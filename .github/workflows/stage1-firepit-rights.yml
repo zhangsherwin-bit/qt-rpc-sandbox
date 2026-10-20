@@ -24,7 +24,7 @@ jobs:
         run: python3 -m py_compile qt_rpc/client.py stage1_firepit/screen.py && python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v && python3 -m unittest discover -s stage1_firepit -p 'test_*.py' -v
   empirical:
     needs: offline
-    if: ${{ github.event.action == 'synchronize' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
