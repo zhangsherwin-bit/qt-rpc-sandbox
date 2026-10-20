@@ -1,0 +1,49 @@
+name: QT Stage1 Lido transferable queue-right market presence
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_lido_claim/**'
+      - '.github/workflows/stage1-lido-transferable-rights.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-global-blockmachine-reads
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned source-ABI Python libraries
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Offline rights parser and RPC cap regression tests
+        run: python3 -m py_compile qt_rpc/client.py stage1_lido_claim/activity.py && python3 -m unittest discover -s qt_rpc -p 'test_*.py' -v && python3 -m unittest discover -s stage1_lido_claim -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: One pinned 90RU cap Lido unstETH transferable-right history screen
+        env:
+          BLOCKMACHINE_API_KEY: ${{ secrets.BLOCKMACHINE_API_KEY }}
+          QT_ALLOW_AUTHENTICATED_RPC: YES
+          QT_PROVIDER_ACCOUNT_RIGHTS_CONFIRMED: YES
+        run: PYTHONPATH=. python3 stage1_lido_claim/activity.py
+      - name: Archive original read-only contract requests and responses
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-lido-unsteth-ownership-evidence
+          path: |
+            stage1_lido_claim_evidence/
+            stage1_lido_claim/
+          retention-days: 14
