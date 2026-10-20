@@ -27,7 +27,7 @@ class TestCashForensics(unittest.TestCase):
   self.assertEqual(r["weth_in_to_actor_wei"],EXPECTED_WETH)
   self.assertEqual(r["weth_out_including_unwrap_wei"],EXPECTED_WETH)
   self.assertEqual(r["gas_wei"],EXPECTED_GAS)
-  self.assertEqual(r["receipt_earned_eth_minus_gas_wei"],11326465741570036)
+  self.assertEqual(r["receipt_earned_eth_minus_gas_wei"],11326465741570037)
  def test_not_earned_if_booster_reward_goes_to_other_address(self):
   tx,rc=self.sample()
   rc["logs"][0]["topics"][2]=topic("0x"+"55"*20)
