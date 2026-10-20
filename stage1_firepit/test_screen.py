@@ -37,8 +37,8 @@ class TestFeeRelease(unittest.TestCase):
   rc={"status":"0x1","blockNumber":"0xc","transactionHash":release["tx"],
        "gasUsed":"0x5208","effectiveGasPrice":"0x3b9aca00",
        "logs":[
-         {"address":UNI,"topics":[TRANSFER,topic(int(sender,16)),topic(int(DEAD,16))],"data":hex(4000*10**18)},
-         {"address":ASSETS["WETH"],"topics":[TRANSFER,topic(int(JAR,16)),topic(int(recipient,16))],"data":hex(8*10**18)}
+         {"address":UNI,"topics":[TRANSFER,topic(int(sender,16)),topic(int(DEAD,16))],"data":"0x"+word(4000*10**18)},
+         {"address":ASSETS["WETH"],"topics":[TRANSFER,topic(int(JAR,16)),topic(int(recipient,16))],"data":"0x"+word(8*10**18)}
        ]}
   result=process(release,rc,tx)
   self.assertEqual(result["payer_from_ERC20_burn_events_wei"][sender],str(4000*10**18))
@@ -51,7 +51,7 @@ class TestFeeRelease(unittest.TestCase):
   rc={"status":"0x1","blockNumber":"0xc","transactionHash":release["tx"],
        "gasUsed":"0x1","effectiveGasPrice":"0x1",
        "logs":[{"address":ASSETS["WETH"],
-       "topics":[TRANSFER,topic(int(JAR,16)),topic(int(sender,16))],"data":hex(8*10**18)}]}
+       "topics":[TRANSFER,topic(int(JAR,16)),topic(int(sender,16))],"data":"0x"+word(8*10**18)}]}
   self.assertEqual(process(release,rc,tx)["received_from_jar_ERC20_raw"],{})
  def test_asset_list_is_not_total_jar(self):
   self.assertLessEqual(len(ASSETS),20)
