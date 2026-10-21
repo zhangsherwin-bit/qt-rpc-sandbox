@@ -21,7 +21,7 @@ class EconomicTests(unittest.TestCase):
   b={"asks":[{"price":"0.51","size":"3"},{"price":"0.55","size":"10"}],
      "bids":[{"price":"0.01","size":"100"}]}
   got=depth_cost(b,Decimal("10"))
-  self.assertEqual(Decimal(got["gross_cost_usdc"]),Decimal("5.33"))
+  self.assertEqual(Decimal(got["gross_cost_usdc"]),Decimal("5.38"))
  def test_cross_asset_book_has_no_fictional_fill(self):
   self.assertEqual(depth_cost({"asks":[]},Decimal("10"))["reason"],"INSUFFICIENT_ASK_DEPTH")
  def test_min_order_size_blocks_tiny_illustrations(self):
