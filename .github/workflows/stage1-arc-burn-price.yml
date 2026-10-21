@@ -1,0 +1,45 @@
+name: QT Stage1 Arc pay-first burn acquisition exact-output 500k
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_arc_burn_price/**'
+      - '.github/workflows/stage1-arc-burn-price.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-arc-payfirst-fixed-20261021
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pin ABI helper and public HTTP client
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Offline ABI and accounting tests
+        run: python3 -m py_compile stage1_arc_burn_price/quote.py && python3 -m unittest discover -s stage1_arc_burn_price -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Fixed predecessor Arc position and 500k exact-output quote, no trade
+        run: PYTHONPATH=. python3 stage1_arc_burn_price/quote.py
+      - name: Preserve original request response hashes and partial failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-arc-500k-burn-price-evidence
+          path: |
+            arc_exactoutput_evidence/
+            stage1_arc_burn_price/
+          retention-days: 14
