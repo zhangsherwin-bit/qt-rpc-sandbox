@@ -1,0 +1,45 @@
+name: QT Stage1 NegRisk real YES bid residual cash from multi NO conversion
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_negrisk_yes/**'
+      - '.github/workflows/stage1-negrisk-yes.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-negrisk-yes-once-20261021
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Pin readonly HTTP client
+        run: python3 -m pip install requests==2.32.3
+      - name: Compile and run pure cash/obligation logic tests offline
+        run: python3 -m py_compile stage1_negrisk_yes/snapshot.py && python3 -m unittest discover -s stage1_negrisk_yes -p 'test_*.py' -v
+  public:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3
+      - name: Six fresh CLOB bid-and-ask books for one predeclared 3-outcome event
+        run: PYTHONPATH=. python3 stage1_negrisk_yes/snapshot.py
+      - name: Preserve exact public books, timestamp, cost and hash evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-negrisk-yes-residual-evidence
+          path: |
+            stage1_negrisk_yes_residual_evidence/
+            stage1_negrisk_yes/
+          retention-days: 14
