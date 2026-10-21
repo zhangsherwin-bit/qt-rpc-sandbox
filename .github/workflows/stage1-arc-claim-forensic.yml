@@ -1,0 +1,45 @@
+name: QT Stage1 fixed Arc native-USDC creator fee burn forensic
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_arc_claim_forensic/**'
+      - '.github/workflows/stage1-arc-claim-forensic.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-arc-burn-one-frozen-tx
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned read-only libraries
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Exact receipt event ABI and fail-closed cash checks offline
+        run: python3 -m py_compile stage1_arc_claim_forensic/claim.py && python3 -m unittest discover -s stage1_arc_claim_forensic -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: One Arc transaction claim-burn paid cash receipt read, zero trades
+        run: PYTHONPATH=. python3 stage1_arc_claim_forensic/claim.py
+      - name: Preserve original on-chain read results incl failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-arc-real-creator-fee-cash
+          path: |
+            stage1_arc_burn_forensic/
+            stage1_arc_claim_forensic/
+          retention-days: 14
