@@ -1,0 +1,43 @@
+name: QT Stage1 compare funding rent with real cross-venue spot-perp basis
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_funding_basis/**'
+      - '.github/workflows/stage1-funding-basis.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-funding-basis-public-once-20261021
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compile and verify basis/gas/capital conventions without API calls
+        run: python3 -m py_compile stage1_funding_basis/paired.py && python3 -m unittest discover -s stage1_funding_basis -p 'test_*.py' -v
+  public_evidence:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3
+      - name: Query 9 public spot/perp/funding endpoints for unchanged holdout dates
+        run: PYTHONPATH=. python3 stage1_funding_basis/paired.py
+      - name: Preserve original public responses, hashes, and incomplete failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-basis-aware-funding-holdout
+          path: |
+            stage1_funding_basis_evidence/
+            stage1_funding_basis/
+          retention-days: 14
