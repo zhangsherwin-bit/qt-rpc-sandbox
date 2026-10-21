@@ -1,0 +1,13 @@
+# QT Stage1 — combining negative-risk conversion with sale of residual YES
+
+2026-10-21. Separate, predeclared follow-up to PR104 (whose conservative zero-valued residual YES screen found 16 finite-depth portfolios and no gross-positive collateral-only conversions). Source official NegRiskAdapter documentation states m distinct NO positions for m mutually exclusive questions can convert into (m-1) times collateral and YES positions corresponding to questions NOT included in the conversion. This is a *logical portfolio identity* that an isolated binary YES+NO solver could miss, but a well informed Conditional Tokens solver would already include.
+
+**Economic opportunity under test:** for 3-outcome soccer market identified in prior PR104 as Gamma event 1228387, contemporaneously purchase any TWO NO positions and SELL the **third YES** position left by conversion at an actual bid. The candidate gross immediate cash before all costs is q collateral plus executable residual YES bid proceeds minus all actual NO ask acquisition costs. If the third YES has no bid at quantity q, immediate cash sell is NOT executable; don't invent a residual price. ALL-THREE-NO conversion releases 2q collateral but leaves no YES, a negative-control strategy.
+
+This test selects the prior public event *after observing the PR104 shortfall*, so no confirmatory holdout claim is allowed. All six token IDs are frozen from the unmodified earlier Gamma API body before fresh book reads; the order of NO and YES calls is fixed. Two quantities q=10 and 50 shares, maximum six public Polymarket CLOB GET requests. Exact original requests and responses SHA256 archived, without credentials or transactions.
+
+**Rights/feasibility gate still missing, even if books have a positive margin:** source Gamma event nesting does NOT prove the marketId used by NegRiskAdapter; must confirm all question IDs are in same market, have no new questions appended, conversion fee and indexSet are valid, CTF operator approvals exist, and CLOB bid/ask legs can fill before quotes change. Caller must own/acquire positions. No live orders or trades.
+
+**Baseline:** fully specified professional CTF market-composition solver with the same positions and six books can discover this; we retain the result even if the simple version finds it. We do not add residual YES as a second payout unless actually sold. The value of the onchain conversion, an actual CLOB YES sale and original NO acquisition each counted exactly once.
+
+No Blockmachine RU, wallets, external outreach, spending, or provider bypass. PR opening triggers one public historical-ish snapshot; synchronizations offline-only. Stage1 remains open; no trading recommendation or Stage2 promotion.
