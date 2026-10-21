@@ -9,6 +9,7 @@ A positive quote-only margin does not prove an executable callback, priority,
 or that the historical actor purchased anything via this route.
 """
 import json,hashlib,sys,time
+from decimal import Decimal
 from pathlib import Path
 from datetime import datetime,timezone
 from Crypto.Hash import keccak
@@ -80,13 +81,13 @@ def encode_exact_output(pool,amount):
  params=[int(pool["currency0"],16),int(pool["currency1"],16),pool["fee"],
          pool["tickSpacing"],int(pool["hooks"],16),1,amount,8*32]
  return sig("quoteExactOutputSingle(((address,address,uint24,int24,address),bool,uint128,bytes))")+word(32)+"".join(word(x) for x in params)+word(0)
-def parse_quote(v):
+def parse_quote(v,amount):
  if not isinstance(v,str) or len(v)!=2+128:raise ValueError("bad IV4Quoter output")
  raw=v[2:];price=int(raw[:64],16);gas=int(raw[64:],16)
  if price<=0:raise ValueError("quote not positive")
  return {"required_input_native_USDC_raw":str(price),
          "quoter_estimated_simulation_gas_not_execution_cost":gas,
-         "usdc_per_token_for_this_quantity":str(price/(BURN_SIZE if price else 1))}
+         "usdc_per_token_for_this_quantity":str(Decimal(price)/Decimal(amount))}
 def rpc(method,args):
  if REPORT["requests"]>=MAX_REQUESTS:raise RuntimeError("PUBLIC_RPC_CAP")
  idx=REPORT["requests"];REPORT["requests"]+=1
@@ -140,7 +141,7 @@ def main():
    REPORT["quoted_sizes"].append(row)
    try:
     quote=rpc("eth_call",[{"to":QUOTER,"data":encode_exact_output(pool,amount)},hex(PARENT)])
-    row.update(parse_quote(quote));row["state"]="QUOTE_RETRIEVED"
+    row.update(parse_quote(quote,amount));row["state"]="QUOTE_RETRIEVED"
     row["budget_residual_after_original_gas_raw"]=str(CASH-ORIGINAL_GAS-int(row["required_input_native_USDC_raw"]))
     row["gross_after_original_gas_positive"]=int(row["budget_residual_after_original_gas_raw"])>0
    except Exception as e:
