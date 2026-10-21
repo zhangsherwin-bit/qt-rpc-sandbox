@@ -1,0 +1,46 @@
+name: QT Stage1 Uniswap pay-first buyback burn keyless activity gate
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_payfirst_burn/**'
+      - '.github/workflows/stage1-payfirst-burn.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-payfirst-burn-only-once
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install exact public HTTP dependency
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Test fixed source event ABI, native currencies, and caps
+        run: python3 -m py_compile stage1_payfirst_burn/scan.py && python3 -m unittest discover -s stage1_payfirst_burn -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install public HTTP client
+        run: python3 -m pip install requests==2.32.3 pycryptodome==3.23.0
+      - name: Run <=19 unauthenticated read-only RPC requests (Robinhood and Arc)
+        run: PYTHONPATH=. python3 stage1_payfirst_burn/scan.py
+      - name: Always archive exact RPC responses and unresolved errors
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-payfirst-native-fee-claim
+          path: |
+            stage1_payfirst_evidence/
+            stage1_payfirst_burn/
+          retention-days: 14
