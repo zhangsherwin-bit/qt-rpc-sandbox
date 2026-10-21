@@ -1,0 +1,45 @@
+name: QT Stage1 payment from leverage demand, public funding history and forward hazard
+'on':
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'stage1_funding_hazard/**'
+      - '.github/workflows/stage1-funding-hazard.yml'
+permissions:
+  contents: read
+concurrency:
+  group: qt-stage1-funding-public-once
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install requests
+        run: python3 -m pip install requests==2.32.3
+      - name: Validate timestamps, Markov vs baseline, and missing-data gates
+        run: python3 -m py_compile stage1_funding_hazard/panel.py && python3 -m unittest discover -s stage1_funding_hazard -p 'test_*.py' -v
+  empirical:
+    needs: offline
+    if: ${{ github.event.action == 'opened' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install requests==2.32.3
+      - name: One frozen public 6-request fundingHistory panel, zero trades
+        run: PYTHONPATH=. python3 stage1_funding_hazard/panel.py
+      - name: Archive exact source responses and incomplete diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qt-stage1-funding-hazard-evidence
+          path: |
+            stage1_funding_evidence/
+            stage1_funding_hazard/
+          retention-days: 14
