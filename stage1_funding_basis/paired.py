@@ -74,6 +74,12 @@ def send(method,url,payload,label):
  if rsp.status_code!=200:raise RuntimeError("HTTP_"+str(rsp.status_code))
  try:return rsp.json()
  except Exception:raise RuntimeError("NON_JSON_PUBLIC_DATA")
+def paired_components(spot_entry,spot_exit,perp_entry,perp_exit,funding_cashflows):
+ """Cash components for one base-unit long spot/short perp, not trade fills."""
+ spot_delta=spot_exit-spot_entry
+ short_delta=perp_entry-perp_exit
+ funding_received=sum(funding_cashflows,Decimal(0))
+ return spot_delta,short_delta,funding_received,spot_delta+short_delta+funding_received
 def one_asset(asset):
  k={"state":"UNRESOLVED"};REPORT["series"][asset]=k;save()
  funding=send("POST",HL,{"type":"fundingHistory","coin":asset,
@@ -97,15 +103,14 @@ def one_asset(asset):
  gaps={kind:sorted(set(range(start,stop+add)) - set(o))[:8]
        for kind,o,add in (("funding",r_f,0),("perp_closes",r_p,1),("spot_closes",r_s,1))}
  k["source_rows"]={"funding":len(funding),"perp_candles":len(marks),"spot_candles":len(spot)}
+ k["sampling_note"]="perp candle closes, NOT hourly funding mark prices or executable fills"
  k["gaps"]=gaps
  if any(gaps.values()):k["state"]="INCOMPLETE_SOURCE_TIME_COVERAGE";save();return
  spot0,spot1=r_s[start],r_s[stop]
  perp0,perp1=r_p[start],r_p[stop]
  # Unit exposure: long one spot token, short one futures token, delta approx zero.
- spot_delta=spot1-spot0
- short_delta=perp0-perp1
- funding_cash=sum((r_f[h]*r_p[h] for h in range(start,stop)),Decimal(0))
- gross=spot_delta+short_delta+funding_cash
+ spot_delta,short_delta,funding_cash,gross=paired_components(
+  spot0,spot1,perp0,perp1,[r_f[h]*r_p[h] for h in range(start,stop)])
  # Fees grid is pure sensitivity, NOT an observed exchange fee schedule.
  sensitivities={str(bp):str(gross-(Decimal(bp)/Decimal(10000)*spot0)) for bp in FEE_GRID_BPS}
  k.update({"state":"COMPLETE_UNEXECUTED_PROXY",
