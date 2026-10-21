@@ -1,0 +1,14 @@
+# QT Stage 1 — Paid to warehouse leverage demand across time
+
+This is an independent family of payment, not a protocol keeper bounty or a block-priority auction. On perpetual futures, one side pays the other variable funding to keep contracts aligned with the spot reference. An independent trader can potentially be compensated for taking the other side of over-demanded leverage while separately financing and hedging spot exposure.
+
+**High-level economics:** The payment source is leveraged market participants, not an unclaimed third-party right. A positive quoted funding rate is neither a risk-free opportunity nor actual realized PnL. A short perpetual earns positive funding when long positions pay short positions, BUT must finance a long spot hedge, pay fees, maintain margin/solvency, manage basis moves, slippage, borrow constraints, operational failure, venue/custody risk, and possibly significant loss during exit. Flash loans cannot finance seven days of hedge collateral.
+
+**Mathematical transfer:** A state-transition model should predict the *conditional hazard of funding sign reversal* rather than fit a stationary "high APY" number. Train a smoothed 2-state Markov sign model on the earlier week and evaluate true forward out-of-time log-loss/Brier against a smoothed unconditional sign predictor on a separated later week. If Markov predicts no better, simplify and treat persistence as unearned. Spot/perp basis remains unmeasured, so this study is a cheap falsification gate, NOT an income backtest.
+
+Source: official Hyperliquid fundingHistory API
+https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals
+
+Freeze 3 well-known coins BTC, ETH, SOL, not profit-ranked. Two 168-hour UTC windows: Sep 10–17 2026 TRAIN and Oct 10–17 HOLDOUT. Exactly 6 public read-only POST /info requests total, returning historical funding observations, no account key, wallet, trade, order, subscription, custody or Blockmachine RU. Report complete-hour counts, duplicates, sign transitions, short-perp funding sums (only a raw cashflow component), and forward model accuracy. No claim of net profit or repeatability. Cancel/deny/429 => UNRESOLVED not zero income.
+
+**Strong baseline:** An ordinary funding trader with the same time series can always observe current funding and model its persistence. Our model must beat an unconditional rate-sign forecast AND after all real hedge costs and constraints before showing incremental value; a complicated model with worse forward log-loss has no special status. Next only if gross carry large and robust: collect executable spot/perp depth, historical basis and mark-to-market, real fee tier, borrow/margin APR and severe stress tail losses, then holdout net ledger. User-authorized research does not imply placing any position.
