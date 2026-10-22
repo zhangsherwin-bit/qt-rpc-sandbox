@@ -1,0 +1,30 @@
+name: QT complete-payout historical cash comparison
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pinned public dependencies
+        run: python3 -m pip install pycryptodome==3.23.0 eth-abi==5.2.0 py-solc-x==2.0.5
+      - name: Offline ABI regression
+        run: python3 -m unittest discover -s phase2 -p 'test_*.py' -v
+      - name: Same bid plus complete ETH payout comparison
+        run: python3 history/payout_followup.py
+      - name: Preserve complete-payout evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt-aave-complete-payout-evidence
+          path: |
+            history/
+            phase2/midnight_codec.py
+          retention-days: 7
